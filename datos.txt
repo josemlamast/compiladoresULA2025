@@ -1,0 +1,42 @@
+val b = 5.8
+val b2 = 10.5
+string prub = "hola mundo"
+
+if a = b
+else  a = 10
+
+
+"sadasdasd"
+asdasdasd
+
+concat()
+converNRtoS()
+converNEtoS()
+converNEtoNR()
+converNRtoNE()
+[]
+@
+@/
+/@
+empty
+head
+tail
+=
+++*/-
+-
+*
+/
+%
+and 
+or
+xor
+val
+let
+in
+fun
+
+
+
+asdasdasdasd
+
+"asdasdasd"
