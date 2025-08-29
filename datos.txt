@@ -1,42 +1,16 @@
-val b = 5.8
-val b2 = 10.5
-string prub = "hola mundo"
+@@ sadasd1 asd asd 
+@"asdasdasd
+    asdasdasd
+    asdasdasd
+    asdasdasd
+asdasdasd"@
 
-if a = b
-else  a = 10
-
-
-"sadasdasd"
-asdasdasd
-
-concat()
-converNRtoS()
-converNEtoS()
-converNEtoNR()
-converNRtoNE()
-[]
-@
-@/
-/@
-empty
-head
-tail
-=
-++*/-
--
-*
-/
-%
-and 
-or
-xor
-val
-let
-in
-fun
-
-
-
-asdasdasdasd
-
-"asdasdasd"
+10,1
+0.0
+0
+0.000
+8
+9
+10
+10.0
+10.1

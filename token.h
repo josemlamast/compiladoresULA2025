@@ -6,11 +6,11 @@ typedef enum
     TOKEN_IF,
     TOKEN_ELSE,
 
-   TOKEN_CONCAT,
-   TOKEN_CONVER_NRTOS,
-   TOKEN_CONVER_NETOS,
-   TOKEN_CONVER_NETONR,
-   TOKEN_CONVER_NRTONE,
+    TOKEN_CONCAT,
+    TOKEN_RTOS,
+    TOKEN_ETOS,
+    TOKEN_ETOR,
+    TOKEN_RTOE,
       
     TOKEN_EMPTY,
     TOKEN_HEAD,
@@ -21,7 +21,7 @@ typedef enum
     TOKEN_SUBSTRACT,
     TOKEN_MULTIPLY,
     TOKEN_DIVIDE, 
-    TOKEN_RESTODIV,
+    TOKEN_MOD,
 
     TOKEN_AND,
     TOKEN_OR,
@@ -32,8 +32,8 @@ typedef enum
     TOKEN_LET,
     TOKEN_TRUE,
     TOKEN_FALSE,
-    TOKEN_NENTERO,
-    TOKEN_NREAL,
+    TOKEN_INT,
+    TOKEN_REAL,
     TOKEN_STRING,
     TOKEN_FUN,
     TOKEN_IN,
@@ -49,14 +49,14 @@ typedef enum
     TOKEN_FST,
     TOKEN_SND,
 
-    TOKEN_MEN,
-    TOKEN_MAY,
-    TOKEN_MENEQL,
-    TOKEN_MAYEQL,
-    TOKEN_DIF,
+    TOKEN_LESS,
+    TOKEN_GREAT,
+    TOKEN_LESSEQL,
+    TOKEN_GREATEQL,
+    TOKEN_NOTEQUAL,
     TOKEN_EQUAL,
 
-    TOKEN_CONMEN,
+    TOKEN_CONMMENT,
     TOKEN_LCONMEN,
     TOKEN_RCONMEN,
 
@@ -85,10 +85,10 @@ inline const char* to_str(token_t t)
 
 
         case TOKEN_CONCAT: return "CONCAT";
-        case TOKEN_CONVER_NRTOS: return "CONVER_NRTOS";
-        case TOKEN_CONVER_NETOS: return "CONVER_NETOS";
-        case TOKEN_CONVER_NETONR: return "CONVER_NETONR";
-        case TOKEN_CONVER_NRTONE: return "CONVER_NRTONE";
+        case TOKEN_RTOS: return "RTOS";
+        case TOKEN_ETOS: return "ETOS";
+        case TOKEN_ETOR: return "ETOR";
+        case TOKEN_RTOE: return "RTOE";
 
         case TOKEN_EMPTY: return "EMPTY";
         case TOKEN_HEAD: return "HEAD";
@@ -99,7 +99,7 @@ inline const char* to_str(token_t t)
         case TOKEN_SUBSTRACT: return "SUBSTRACT";
         case TOKEN_MULTIPLY: return "MULTIPLY";
         case TOKEN_DIVIDE: return "DIVIDE";
-        case TOKEN_RESTODIV: return "RESTODIV";
+        case TOKEN_MOD: return "MOD";
 
         case TOKEN_AND: return "AND";
         case TOKEN_OR: return "OR";
@@ -111,8 +111,8 @@ inline const char* to_str(token_t t)
         case TOKEN_LET: return "LET";
         case TOKEN_TRUE: return "TRUE";
         case TOKEN_FALSE: return "FALSE";
-        case TOKEN_NENTERO: return "NENTERO";
-        case TOKEN_NREAL: return "NREAL";
+        case TOKEN_INT: return "INT";
+        case TOKEN_REAL: return "REAL";
         case TOKEN_STRING: return "STRING";
         case TOKEN_FUN: return "FUN";
         case TOKEN_IN: return "IN";
@@ -128,14 +128,14 @@ inline const char* to_str(token_t t)
         case TOKEN_LCORCH: return "LCORCH";
         case TOKEN_RCORCH: return "RCORCH";
 
-        case TOKEN_MEN: return "MEN";
-        case TOKEN_MAY: return "MAY";
-        case TOKEN_MENEQL: return "MENEQL";
-        case TOKEN_MAYEQL: return "MAYEQL";
-        case TOKEN_DIF: return "DIF";
+        case TOKEN_LESS: return "LESS";
+        case TOKEN_GREAT: return "GREAT";
+        case TOKEN_LESSEQL: return "LESSEQL";
+        case TOKEN_GREATEQL: return "GREATEQL";
+        case TOKEN_NOTEQUAL: return "NOTEQUAL";
         case TOKEN_EQUAL: return "EQUAL";
 
-        case TOKEN_CONMEN: return "CONMEN";
+        case TOKEN_CONMMENT: return "CONMMENT";
         case TOKEN_LCONMEN: return "LCONMEN";
         case TOKEN_RCONMEN: return "RCONMEN";
 
