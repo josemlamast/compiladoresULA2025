@@ -1,16 +1,1 @@
-@@ sadasd1 asd asd 
-@"asdasdasd
-    asdasdasd
-    asdasdasd
-    asdasdasd
-asdasdasd"@
-
-10,1
-0.0
-0
-0.000
-8
-9
-10
-10.0
-10.1
+((10 + 10)/(10+10))-1

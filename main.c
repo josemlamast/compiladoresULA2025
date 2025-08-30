@@ -1,14 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "./token.h"
+#include <expression.hpp>
 
 extern FILE* yyin;
-extern char* yytext;
-
-int yylex();
-
-const char* to_str(token_t t);
+extern int yyparse();
+extern Expression* parser_result;
 
 void usage(char* argv[])
 {
@@ -30,7 +27,21 @@ int main(int argc, char* argv[])
         printf("Could not open %s\n", argv[1]);
         exit(1);
     }
+    
+    int result = yyparse();
 
+    if (result == 0)
+    {
+        printf("%s = %d\n", parser_result->to_string().c_str(), parser_result->eval());
+        parser_result->destroy();
+    }
+    else
+    {
+        printf("Parse failed!\n");
+    }
+
+    return 0;
+    /*
     while (1)
     {
         token_t t = yylex();
@@ -42,7 +53,10 @@ int main(int argc, char* argv[])
         }
 
         printf("Token: %s value: %s\n", to_str(t), yytext);
-    }
 
-    return 0;
+
+
+    }
+        */
+
 }
