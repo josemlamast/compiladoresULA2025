@@ -1,12 +1,15 @@
 %{
     #include <stdio.h>
     #include <expression.hpp>
+    #include <stdlib.h>
+    #include <string.h>
 
     #define YYSTYPE Expression*
 
 
     extern int yylex();
     extern char* yytext;
+    extern char* last_identifier;
     int yyerror(const char*);
     
     Expression* parser_result{nullptr};
@@ -26,7 +29,7 @@
 %token TOKEN_HEAD
 %token TOKEN_TAIL
     
-%token TOKEN_ASIG
+%token TOKEN_ASIG 
 %token TOKEN_ADD
 %token TOKEN_SUBSTRACT
 %token TOKEN_MULTIPLY
@@ -76,24 +79,54 @@
 %% /* ---------- grammar ---------- */
 
 
-    program : expr                           { parser_result = $1; }
+expr : | and_expr                          { $$ = $1; }
+     ;
+
+and_expr :
+
+equality_expr : 
+
+relational_expr : 
+
+concat_expr : concat_expr TOKEN_CONCAT additive_expr { $$ = new StringConcat($1, $3); }
+            | additive_expr                           { $$ = $1; }
+            ;
+
+additive_expr : additive_expr TOKEN_ADD multiplicative_expr       { $$ = new Addition($1, $3); }
+              | additive_expr TOKEN_SUBSTRACT multiplicative_expr { $$ = new Subtraction($1, $3); }
+              | multiplicative_expr                               { $$ = $1; }
+              ;
+
+multiplicative_expr : multiplicative_expr TOKEN_MULTIPLY unary_expr { $$ = new Multiplication($1, $3); }
+                    | multiplicative_expr TOKEN_DIVIDE unary_expr   { $$ = new Division($1, $3); }
+                    | multiplicative_expr TOKEN_MOD unary_expr      { $$ = new Modulo($1, $3); }
+                    | unary_expr                                    { $$ = $1; }
+                    ;
+
+unary_expr : TOKEN_NOT unary_expr                        { $$ = new LogicalNot($2); }
+           | TOKEN_SUBSTRACT unary_expr                  { $$ = new Subtraction(new IntegerValue(0), $2); }
+           | primary_expr                                { $$ = $1; }
+           ;
+
+primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN           { $$ = $2; }
+             | literal                                  { $$ = $1; }
+             | TOKEN_IDENTIFIER                         { $$ = new Identifier(last_identifier); }
+             ;
+
+literal : TOKEN_INT                                     { $$ = new IntegerValue(atoi(yytext)); }
+        | TOKEN_REAL                                    { $$ = new RealValue(atof(yytext)); }
+        | TOKEN_STRING                                  { 
+            // Remove quotes from string literal
+            char* str = strdup(yytext + 1);
+            str[strlen(str) - 1] = '\0';
+            $$ = new StringValue(str);
+            free(str);
+        }
+        | TOKEN_TRUE                                    { $$ = new BooleanValue(true); }
+        | TOKEN_FALSE                                   { $$ = new BooleanValue(false); }
         ;
-
-expr : expr TOKEN_ADD term              { $$ = new Addition($1, $3); }
-     | expr TOKEN_SUBSTRACT term             { $$ = new Subtraction($1, $3); }
-     | term                              { $$ = $1; }
-     ;
-
-term : term TOKEN_MULTIPLY factor             { $$ = new Multiplication($1, $3); }
-     | term TOKEN_DIVIDE factor             { $$ = new Division($1, $3); }
-     | term TOKEN_MOD factor             { $$ = new Module($1, $3); }
-     | factor                            { $$ = $1; }
-     ;
-
-factor : TOKEN_SUBSTRACT factor              { $$ = new Subtraction(new Value(0), $2); }
-       | TOKEN_LPAREN expr TOKEN_RPAREN  { $$ = $2; }
-       | TOKEN_INT                       { $$ = new Value(atoi(yytext)); }
-       ;
+      
+              ;
 %% /* ---------- user code ---------- */
 
 int yyerror(const char* s) {
