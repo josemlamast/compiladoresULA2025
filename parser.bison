@@ -6,7 +6,6 @@
 
     #define YYSTYPE Expression*
 
-
     extern int yylex();
     extern char* yytext;
     extern char* last_identifier;
@@ -78,15 +77,30 @@
 
 %% /* ---------- grammar ---------- */
 
+program : expr                           { parser_result = $1; }
+        ;
 
-expr : | and_expr                          { $$ = $1; }
+expr : expr TOKEN_OR and_expr            { $$ = new LogicalOr($1, $3); }
+     | expr TOKEN_XOR and_expr           { $$ = new LogicalXor($1, $3); }
+     | and_expr                          { $$ = $1; }
      ;
 
-and_expr :
+and_expr : and_expr TOKEN_AND equality_expr  { $$ = new LogicalAnd($1, $3); }
+         | equality_expr                     { $$ = $1; }
+         ;
 
-equality_expr : 
+equality_expr : equality_expr TOKEN_EQUAL relational_expr    { $$ = new Equal($1, $3); }
+              | equality_expr TOKEN_NOTEQUAL relational_expr { $$ = new NotEqual($1, $3); }
+              | relational_expr                              { $$ = $1; }
+              ;
 
-relational_expr : 
+relational_expr : relational_expr TOKEN_LESS concat_expr     { $$ = new LessThan($1, $3); }
+                | relational_expr TOKEN_GREAT concat_expr    { $$ = new GreaterThan($1, $3); }
+                | relational_expr TOKEN_LESSEQL concat_expr  { $$ = new LessEqual($1, $3); }
+                | relational_expr TOKEN_GREATEQL concat_expr { $$ = new GreaterEqual($1, $3); }
+                | relational_expr TOKEN_IN concat_expr       { $$ = new InArray($1, $3); }
+                | concat_expr                                { $$ = $1; }
+                ;
 
 concat_expr : concat_expr TOKEN_CONCAT additive_expr { $$ = new StringConcat($1, $3); }
             | additive_expr                           { $$ = $1; }
@@ -110,6 +124,7 @@ unary_expr : TOKEN_NOT unary_expr                        { $$ = new LogicalNot($
 
 primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN           { $$ = $2; }
              | literal                                  { $$ = $1; }
+             | function_call                            { $$ = $1; }
              | TOKEN_IDENTIFIER                         { $$ = new Identifier(last_identifier); }
              ;
 
@@ -125,8 +140,34 @@ literal : TOKEN_INT                                     { $$ = new IntegerValue(
         | TOKEN_TRUE                                    { $$ = new BooleanValue(true); }
         | TOKEN_FALSE                                   { $$ = new BooleanValue(false); }
         ;
-      
+
+function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN  
+                { $$ = new PrintExpression($3); }
+              | TOKEN_PAIR TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
+                { $$ = new Pair($3, $6); }
+              | TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN    
+                { $$ = new First($3); }
+              | TOKEN_SND TOKEN_LPAREN expr TOKEN_RPAREN    
+                { $$ = new Second($3); }
+              | TOKEN_ETOS TOKEN_LPAREN expr TOKEN_RPAREN   
+                { $$ = new ConvertIntToString($3); }
+              | TOKEN_RTOS TOKEN_LPAREN expr TOKEN_RPAREN   
+                { $$ = new ConvertRealToString($3); }
+              | TOKEN_ETOR TOKEN_LPAREN expr TOKEN_RPAREN   
+                { $$ = new ConvertIntToReal($3); }
+              | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   
+                { $$ = new ConvertRealToInt($3); }
+              | TOKEN_LET TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
+                { $$ = new LetExpression(new Identifier(last_identifier), $6, $9); }
+              | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
+                { $$ = new IfExpression($3, $6, nullptr); }
+              | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_ELSE TOKEN_LPAREN expr TOKEN_RPAREN
+                { $$ = new IfExpression($3, $6, $10); }
+              | TOKEN_EMPTY
+                { $$ = new EmptyArray(); }
               ;
+
+
 %% /* ---------- user code ---------- */
 
 int yyerror(const char* s) {

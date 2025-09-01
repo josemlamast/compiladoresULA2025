@@ -1,5 +1,6 @@
 %{
 #include "token.h"
+char* last_identifier = nullptr;
 %}
 
 SPACE      [ \t\n]
@@ -43,14 +44,14 @@ COMMENT ({COMMENTL}|{COMMENTML})
 "xor" { return TOKEN_XOR; }
 "val" { return TOKEN_VAL; }
 "let" { return TOKEN_LET; }
+"true" { return TOKEN_TRUE; }
+"false" { return TOKEN_FALSE; }
 "in" { return TOKEN_IN; }
 "fun" { return TOKEN_FUN; }
 "print" { return TOKEN_PRINT; }
 "pair" { return TOKEN_PAIR; }
 "fst" { return TOKEN_FST; }
 "snd" { return TOKEN_SND; }
-"true" { return TOKEN_TRUE; }
-"false" { return TOKEN_FALSE; }
 "<" { return TOKEN_LESS; }
 ">" { return TOKEN_GREAT; }
 "<=" { return TOKEN_LESSEQL; }
