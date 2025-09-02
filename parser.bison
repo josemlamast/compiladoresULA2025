@@ -122,11 +122,13 @@ unary_expr : TOKEN_NOT unary_expr                        { $$ = new LogicalNot($
            | primary_expr                                { $$ = $1; }
            ;
 
+
 primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN           { $$ = $2; }
              | literal                                  { $$ = $1; }
-             | function_call                            { $$ = $1; }
+             | function_call                            { $$ = $1; } 
              | TOKEN_IDENTIFIER                         { $$ = new Identifier(last_identifier); }
              ;
+
 
 literal : TOKEN_INT                                     { $$ = new IntegerValue(atoi(yytext)); }
         | TOKEN_REAL                                    { $$ = new RealValue(atof(yytext)); }
@@ -165,6 +167,20 @@ function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN
                 { $$ = new IfExpression($3, $6, $10); }
               | TOKEN_EMPTY
                 { $$ = new EmptyArray(); }
+              | TOKEN_FUN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
+              {
+                Identifier* func_name = dynamic_cast<Identifier*>($3);
+                Identifier* param_name = dynamic_cast<Identifier*>($6);
+                if(func_name && param_name){
+                    $$ = new FunctionDefinition(func_name, param_name, $9);
+                }
+                else{
+                    yyerror("func name and parameters must to be Identifier");
+                    YYERROR;
+                }                
+              }
+              | TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
+              {$$ = new FunctionCall(new Identifier(last_identifier) , $3); }
               ;
 
 

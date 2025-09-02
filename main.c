@@ -7,6 +7,7 @@
 extern FILE* yyin;
 extern int yyparse();
 extern Expression* parser_result;
+extern void cleanup_lexer();
 
 void usage(char* argv[])
 {
@@ -26,6 +27,7 @@ std::string value_to_string(const Value_t& val) {
         }
     }, val);
 }
+
 int main(int argc, char* argv[])
 {
     if (argc > 2)
@@ -72,6 +74,6 @@ int main(int argc, char* argv[])
     if (argc == 2) {
         fclose(yyin);
     }
-
+    cleanup_lexer();
     return 0;
 }

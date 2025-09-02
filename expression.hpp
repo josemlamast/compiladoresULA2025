@@ -232,7 +232,7 @@ private:
 class Identifier : public Expression
 {
 public:
-    explicit Identifier(const std::string& name) noexcept;
+    explicit Identifier(const char* name) noexcept;
     void destroy() noexcept override;
     Value_t eval(Environment* env = nullptr) noexcept override;
     std::string to_string() const noexcept override;

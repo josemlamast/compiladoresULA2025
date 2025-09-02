@@ -1,13 +1,18 @@
 %{
 #include "token.h"
+#include <stdlib.h>
+#include <string.h>
+#include <stdio.h>
+
+
 char* last_identifier = nullptr;
 %}
 
 SPACE      [ \t\n]
 DIGIT      [0-9]
 LETTER     [A-Za-z] 
-INT     ({DIGIT}*)
-REAL ({DIGIT}*([.|,]{DIGIT}*))
+INT     ({DIGIT}+)
+REAL ({DIGIT}+([.|,]{DIGIT}+))
 IDENTIFIER ({LETTER})({DIGIT}|{LETTER}|_)*
 TEXT       (\"({DIGIT}|{LETTER}|{SPACE})*\")
 COMMENTL (@@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*)
@@ -60,13 +65,30 @@ COMMENT ({COMMENTL}|{COMMENTML})
 "==" { return TOKEN_EQUAL; }
 {COMMENT} { /*ignorar*/ }
 
-{IDENTIFIER} { return TOKEN_IDENTIFIER; }
+{IDENTIFIER} {
+    if (last_identifier != nullptr) {
+        free(last_identifier);
+    }
+    last_identifier = strdup(yytext);
+    return TOKEN_IDENTIFIER;
+}
 {TEXT}       { return TOKEN_STRING; }
 
-
+. {
+    printf("caracter no reconocido %s", yytext);
+    return TOKEN_UNKNOWN;}
 
 %%
+
+
 int yywrap() { return 1; }
+
+void cleanup_lexer(){
+    if(last_identifier){
+        free(last_identifier);
+        last_identifier = nullptr;
+    }
+}
 
 
 

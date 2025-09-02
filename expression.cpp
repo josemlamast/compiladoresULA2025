@@ -1,5 +1,7 @@
 #include <expression.hpp>
-#include <sstream>
+#include <iostream>
+#include <cstdlib>
+#include <cstring>
 #include <stdexcept>
 
 using namespace std::literals;
@@ -94,52 +96,6 @@ std::string PrintExpression::operand_str() const noexcept {
 std::string PrintExpression::get_type() const noexcept {
     return "print_expression";
 }
-
-FunctionCall::FunctionCall(Expression* func, Expression* arg) noexcept
-    : function{func}, argument{arg} {}
-void FunctionCall::destroy() noexcept {
-    if (function) {
-        function->destroy();
-        delete function;
-        function = nullptr;
-    }
-    if (argument) {
-        argument->destroy();
-        delete argument;
-        argument = nullptr;
-    }
-}
-
-Value_t FunctionCall::eval(Environment* env) noexcept {
-    if (auto* id = dynamic_cast<Identifier*>(function)) {
-        if (env) {
-            auto* func_def = env->lookup_function(id->get_name());
-            if (func_def) {
-                Environment* func_env = env->create_child();
-                
-                auto arg_val = argument->eval(env);
-                if (auto* param_id = dynamic_cast<Identifier*>(func_def->parameter)) {
-                    func_env->bind(param_id->get_name(), arg_val);
-                }
-                
-                auto result = func_def->function_body->eval(func_env);
-                delete func_env;
-                return result;
-            }
-        }
-    }
-    
-    return 0;
-}
-
-std::string FunctionCall::to_string() const noexcept {
-    return function->to_string() + "(" + argument->to_string() + ")";
-}
-
-std::string FunctionCall::get_type() const noexcept {
-    return "function_call";
-}
-
 
 
 UnaryOperation::UnaryOperation(Expression* expr) noexcept : expression{expr} {}
@@ -386,6 +342,7 @@ std::string EmptyArray::to_string() const noexcept {
 std::string EmptyArray::get_type() const noexcept {
     return "empty_array";
 }
+
 Value_t Head::eval(Environment* env) noexcept {
     auto val = expression->eval(env);
     return val;
@@ -473,7 +430,7 @@ std::string StringValue::get_type() const noexcept {
     return "string";
 }
 
-Identifier::Identifier(const std::string& name) noexcept : name{name} {}
+Identifier::Identifier(const char* name) noexcept : name{name ? name : ""} {}
 void Identifier::destroy() noexcept {}
 Value_t Identifier::eval(Environment* env) noexcept {
     if (env) {
@@ -914,3 +871,66 @@ std::string GreaterEqual::operand_str() const noexcept {
 std::string GreaterEqual::get_type() const noexcept {
     return "greater_equal";
 }
+
+
+FunctionDefinition::FunctionDefinition(Expression* name, Expression* param, Expression* body) noexcept
+    : function_name{name}, parameter{param}, function_body{body} {}
+void FunctionDefinition::destroy() noexcept {}
+Value_t FunctionDefinition::eval(Environment* env) noexcept {
+    if (auto* id = dynamic_cast<Identifier*>(function_name)) {
+        if (env) {
+            env->bind_function(id->get_name(), this);
+        }
+    }
+    
+    return std::string("function_defined");
+}
+std::string FunctionDefinition::to_string() const noexcept {
+    return "fun(" + function_name->to_string() + ", " + parameter->to_string() + ", " + function_body->to_string() + ")";
+}
+std::string FunctionDefinition::get_type() const noexcept {
+    return "function_definition";
+}
+
+FunctionCall::FunctionCall(Expression* func, Expression* arg) noexcept
+    : function{func}, argument{arg} {}
+void FunctionCall::destroy() noexcept {
+    if (function) {
+        function->destroy();
+        delete function;
+        function = nullptr;
+    }
+    if (argument) {
+        argument->destroy();
+        delete argument;
+        argument = nullptr;
+    }
+}
+Value_t FunctionCall::eval(Environment* env) noexcept {
+    if (auto* id = dynamic_cast<Identifier*>(function)) {
+        if (env) {
+            auto* func_def = env->lookup_function(id->get_name());
+            if (func_def) {
+                Environment* func_env = env->create_child();
+                
+                auto arg_val = argument->eval(env);
+                if (auto* param_id = dynamic_cast<Identifier*>(func_def->parameter)) {
+                    func_env->bind(param_id->get_name(), arg_val);
+                }
+                
+                auto result = func_def->function_body->eval(func_env);
+                delete func_env;
+                return result;
+            }
+        }
+    }
+    
+    return 0;
+}
+std::string FunctionCall::to_string() const noexcept {
+    return function->to_string() + "(" + argument->to_string() + ")";
+}
+std::string FunctionCall::get_type() const noexcept {
+    return "function_call";
+}
+
