@@ -262,7 +262,6 @@ Value_t LetExpression::eval(Environment* env) noexcept {
     }
     
     auto result = body_expr->eval(local_env);
-    
     if (!env) {
         delete local_env;
     }
@@ -270,7 +269,7 @@ Value_t LetExpression::eval(Environment* env) noexcept {
     return result;
 }
 std::string LetExpression::to_string() const noexcept {
-    return "let(" + variable->to_string() + ", " + value_expr->to_string() + ", " + body_expr->to_string() + ")";
+    return "let  " + variable->to_string() + " = " + value_expr->to_string() + "in " + body_expr->to_string() ;
 }
 std::string LetExpression::get_type() const noexcept {
     return "let_expression";
@@ -314,9 +313,9 @@ Value_t Array::eval(Environment* env) noexcept {
 }
 std::string Array::to_string() const noexcept {
     if (empty) {
-        return "[]";
+        return "end";
     }
-    return "[" + head_expr->to_string() + " | " + (tail_array ? tail_array->to_string() : "[]") + "]";
+    return "(" + head_expr->to_string() + " , " +  tail_array->to_string() + ")";
 }
 std::string Array::get_type() const noexcept {
     return "array";
@@ -362,21 +361,6 @@ std::string Tail::operand_str() const noexcept {
 }
 std::string Tail::get_type() const noexcept {
     return "tail";
-}
-Value_t InArray::eval(Environment* env) noexcept {
-    auto element = left_expression->eval(env);
-    auto array_val = right_expression->eval(env);
-    
-    std::string element_str = value_to_string(element);
-    std::string array_str = value_to_string(array_val);
-    
-    return array_str.find(element_str) != std::string::npos;
-}
-std::string InArray::operand_str() const noexcept {
-    return " in ";
-}
-std::string InArray::get_type() const noexcept {
-    return "in_array";
 }
 
 
@@ -680,6 +664,7 @@ void Pair::destroy() noexcept {
     }
 }
 Value_t Pair::eval(Environment* env) noexcept {
+
     auto first_val = first_expr->eval(env);
     auto second_val = second_expr->eval(env);
     return "(" + value_to_string(first_val) + ", " + value_to_string(second_val) + ")";
@@ -691,9 +676,12 @@ std::string Pair::get_type() const noexcept {
     return "pair";
 }
 Expression* Pair::get_first() const noexcept {
+             
+std::cout << "paso por first_expr" << first_expr << std::endl;
     return first_expr;
 }
 Expression* Pair::get_second() const noexcept {
+std::cout << "paso por get_second" << second_expr << std::endl;
     return second_expr;
 }
 
@@ -701,9 +689,10 @@ Value_t First::eval(Environment* env) noexcept {
     if (auto* pair = dynamic_cast<Pair*>(expression)) {
         return pair->first_expr->eval(env);
     }
-    
     auto val = expression->eval(env);
     std::string str = value_to_string(val);
+    std::cout << "Value_t First" << str << std::endl;
+
     if (str.length() > 2 && str[0] == '(' && str.back() == ')') {
         size_t comma = str.find(", ");
         if (comma != std::string::npos) {
@@ -726,15 +715,23 @@ std::string First::get_type() const noexcept {
 }
 
 Value_t Second::eval(Environment* env) noexcept {
+
     if (auto* pair = dynamic_cast<Pair*>(expression)) {
         return pair->second_expr->eval(env);
     }
-    
     auto val = expression->eval(env);
+ 
     std::string str = value_to_string(val);
+    std::cout << "Value_t Second" << str << std::endl;
+  std::cout << "str.length() = " << str.length() << std::endl;
+    std::cout << "str[0] = " << str[0] << std::endl;
+  std::cout << "str.back() = " << str.back() << std::endl;
+
     if (str.length() > 2 && str[0] == '(' && str.back() == ')') {
+        printf("(str.length() > 2 && str[0] == '(' && str.back() == ')'");
         size_t comma = str.find(", ");
         if (comma != std::string::npos) {
+            printf("(comma != std::string::npos)");
             std::string second_part = str.substr(comma + 2, str.length() - comma - 3);
             try {
                 return std::stoi(second_part);
@@ -893,12 +890,12 @@ std::string FunctionDefinition::get_type() const noexcept {
 }
 
 FunctionCall::FunctionCall(Expression* func, Expression* arg) noexcept
-    : function{func}, argument{arg} {}
+    : function_name{func}, argument{arg} {}
 void FunctionCall::destroy() noexcept {
-    if (function) {
-        function->destroy();
-        delete function;
-        function = nullptr;
+    if (function_name) {
+        function_name->destroy();
+        delete function_name;
+        function_name = nullptr;
     }
     if (argument) {
         argument->destroy();
@@ -907,7 +904,7 @@ void FunctionCall::destroy() noexcept {
     }
 }
 Value_t FunctionCall::eval(Environment* env) noexcept {
-    if (auto* id = dynamic_cast<Identifier*>(function)) {
+    if (auto* id = dynamic_cast<Identifier*>(function_name)) {
         if (env) {
             auto* func_def = env->lookup_function(id->get_name());
             if (func_def) {
@@ -928,7 +925,7 @@ Value_t FunctionCall::eval(Environment* env) noexcept {
     return 0;
 }
 std::string FunctionCall::to_string() const noexcept {
-    return function->to_string() + "(" + argument->to_string() + ")";
+    return function_name->to_string() + "(" + argument->to_string() + ")";
 }
 std::string FunctionCall::get_type() const noexcept {
     return "function_call";

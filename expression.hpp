@@ -167,14 +167,6 @@ public:
     std::string get_type() const noexcept override;
 };
 
-class InArray : public BinaryOperation
-{
-public:
-    using BinaryOperation::BinaryOperation;
-    Value_t eval(Environment* env = nullptr) noexcept override;
-    std::string operand_str() const noexcept override;
-    std::string get_type() const noexcept override;
-};
 
 
 class IntegerValue : public Expression
@@ -458,7 +450,7 @@ public:
     std::string get_type() const noexcept override;
 
 private:
-    Expression* function;
+    Expression* function_name;
     Expression* argument;
 };
 

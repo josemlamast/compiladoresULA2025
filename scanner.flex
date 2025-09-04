@@ -6,6 +6,11 @@
 
 
 char* last_identifier = nullptr;
+char* prev_identifier = nullptr;
+
+int let_context = 0;
+char* let_var_stack[100];
+int let_var_top = 0;
 %}
 
 SPACE      [ \t\n]
@@ -14,11 +19,11 @@ LETTER     [A-Za-z]
 INT     ({DIGIT}+)
 REAL ({DIGIT}+([.|,]{DIGIT}+))
 IDENTIFIER ({LETTER})({DIGIT}|{LETTER}|_)*
-TEXT       (\"({DIGIT}|{LETTER}|{SPACE})*\")
+TEXT       (\"({DIGIT}|{LETTER}|{SPACE}|[+\-*/])*\")
 COMMENTL (@@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*)
 COMMENTML   (\@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*\@)
-
 COMMENT ({COMMENTL}|{COMMENTML})
+NARRAY (_{DIGIT}+)
 %%
 {SPACE} { }
 "#" { return TOKEN_CONCAT; }
@@ -63,12 +68,24 @@ COMMENT ({COMMENTL}|{COMMENTML})
 ">=" { return TOKEN_GREATEQL; }
 "!=" { return TOKEN_NOTEQUAL; }
 "==" { return TOKEN_EQUAL; }
+"end" { return TOKEN_END;}
+"," { return TOKEN_COMA;}
+"<+>" { return TOKEN_ADDARRAY;}
+{NARRAY} { return TOKEN_NARRAY; }
+
+
 {COMMENT} { /*ignorar*/ }
 
 {IDENTIFIER} {
-    if (last_identifier != nullptr) {
-        free(last_identifier);
+     if (let_context == 1) {
+        if (let_var_top < 100) {
+            let_var_stack[let_var_top++] = strdup(yytext);
+        }
     }
+    if (prev_identifier != nullptr) {
+        free(prev_identifier);
+    }
+    prev_identifier = last_identifier;
     last_identifier = strdup(yytext);
     return TOKEN_IDENTIFIER;
 }

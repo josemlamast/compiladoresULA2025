@@ -9,10 +9,12 @@
     extern int yylex();
     extern char* yytext;
     extern char* last_identifier;
+    extern char* prev_identifier;
     int yyerror(const char*);
     
     Expression* parser_result{nullptr};
 %}
+
 
 %token TOKEN_EOF
 %token TOKEN_IF
@@ -71,8 +73,15 @@
 %token TOKEN_CONMMENT
 %token TOKEN_LCONMEN
 %token TOKEN_RCONMEN
+%token TOKEN_COMA
+%token TOKEN_END
 
 %token  TOKEN_PRINT
+%token  TOKEN_NARRAY
+
+%token  TOKEN_ADDARRAY
+
+
 
 
 %% /* ---------- grammar ---------- */
@@ -98,7 +107,6 @@ relational_expr : relational_expr TOKEN_LESS concat_expr     { $$ = new LessThan
                 | relational_expr TOKEN_GREAT concat_expr    { $$ = new GreaterThan($1, $3); }
                 | relational_expr TOKEN_LESSEQL concat_expr  { $$ = new LessEqual($1, $3); }
                 | relational_expr TOKEN_GREATEQL concat_expr { $$ = new GreaterEqual($1, $3); }
-                | relational_expr TOKEN_IN concat_expr       { $$ = new InArray($1, $3); }
                 | concat_expr                                { $$ = $1; }
                 ;
 
@@ -126,27 +134,63 @@ unary_expr : TOKEN_NOT unary_expr                        { $$ = new LogicalNot($
 primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN           { $$ = $2; }
              | literal                                  { $$ = $1; }
              | function_call                            { $$ = $1; } 
+             | array_literal                            { $$ = $1; }
              | TOKEN_IDENTIFIER                         { $$ = new Identifier(last_identifier); }
+             | TOKEN_FUN TOKEN_IDENTIFIER TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN  expr TOKEN_END
+              {
+                char* func_name_str = strdup(prev_identifier);
+                char* param_name_str = strdup(last_identifier);
+
+                if(func_name_str && param_name_str){
+                  $$ = new FunctionDefinition(new Identifier(func_name_str), new Identifier(param_name_str), $6);                }
+                else{
+                    yyerror("func name and parameters must to be Identifier" );
+                    YYERROR;
+                }           
+                free(func_name_str);
+                free(param_name_str);     
+              }
              ;
+
 
 
 literal : TOKEN_INT                                     { $$ = new IntegerValue(atoi(yytext)); }
         | TOKEN_REAL                                    { $$ = new RealValue(atof(yytext)); }
         | TOKEN_STRING                                  { 
-            // Remove quotes from string literal
             char* str = strdup(yytext + 1);
             str[strlen(str) - 1] = '\0';
             $$ = new StringValue(str);
             free(str);
         }
-        | TOKEN_TRUE                                    { $$ = new BooleanValue(true); }
-        | TOKEN_FALSE                                   { $$ = new BooleanValue(false); }
+        | TOKEN_TRUE                      { $$ = new BooleanValue(true); }
+        | TOKEN_FALSE                     { $$ = new BooleanValue(false); }
+        | array_literal                   { $$ = $1; }  
         ;
+
+array_literal : TOKEN_LCORCH elements TOKEN_RCORCH { $$ = $2; }
+              | TOKEN_LCORCH TOKEN_RCORCH          { $$ = new Array(); }  // Array vacío
+              ;
+
+elements : elements TOKEN_COMA expr 
+               { 
+             // $1 es de tipo Array* (pero está declarado como Expression*)
+             // Hacemos un cast a Array* para el constructor
+             Array* tail = dynamic_cast<Array*>($1);
+             if (tail == nullptr) {
+                 // Manejar error si no es un Array (no debería pasar)
+                 yyerror("Expected array in elements rule");
+                 YYABORT;
+             }
+             $$ = new Array($3, tail); 
+           }
+         | expr 
+           { 
+             $$ = new Array($1, new Array()); 
+           }
+         ;
 
 function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN  
                 { $$ = new PrintExpression($3); }
-              | TOKEN_PAIR TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new Pair($3, $6); }
               | TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN    
                 { $$ = new First($3); }
               | TOKEN_SND TOKEN_LPAREN expr TOKEN_RPAREN    
@@ -159,15 +203,31 @@ function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN
                 { $$ = new ConvertIntToReal($3); }
               | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   
                 { $$ = new ConvertRealToInt($3); }
-              | TOKEN_LET TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new LetExpression(new Identifier(last_identifier), $6, $9); }
-              | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new IfExpression($3, $6, nullptr); }
-              | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN TOKEN_ELSE TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new IfExpression($3, $6, $10); }
+              | TOKEN_LET  TOKEN_IDENTIFIER  TOKEN_ASIG expr  TOKEN_IN expr 
+                { $$ = new LetExpression(new Identifier(last_identifier), $4, $6); }
+              | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN  expr  TOKEN_ELSE  expr  TOKEN_END
+                { $$ = new IfExpression($3, $5, $7); }
               | TOKEN_EMPTY
                 { $$ = new EmptyArray(); }
-              | TOKEN_FUN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
+            
+              | TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
+              {$$ = new FunctionCall(new Identifier(last_identifier) , $3); }
+                | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
+                { $$ = new Head($3); }
+              | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN
+                { $$ = new Tail($3); }
+              ;
+                          
+
+
+%% /* ---------- user code ---------- */
+
+int yyerror(const char* s) {
+    printf("Parse error: %s\n", s);
+        return 1;
+    } 
+
+    /*              | TOKEN_FUN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
               {
                 Identifier* func_name = dynamic_cast<Identifier*>($3);
                 Identifier* param_name = dynamic_cast<Identifier*>($6);
@@ -178,15 +238,4 @@ function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN
                     yyerror("func name and parameters must to be Identifier");
                     YYERROR;
                 }                
-              }
-              | TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
-              {$$ = new FunctionCall(new Identifier(last_identifier) , $3); }
-              ;
-
-
-%% /* ---------- user code ---------- */
-
-int yyerror(const char* s) {
-    printf("Parse error: %s\n", s);
-        return 1;
-    } 
+              }*/

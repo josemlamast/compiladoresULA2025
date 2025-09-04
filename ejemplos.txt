@@ -13,80 +13,110 @@ true and false or true
 10 > 5 and 3 < 7
 
 # 5. Binding de variables simple
-let(x)(10)(x + 5)
-->let x = 10 in x + 5
+let x = 10 in x + 5
 
 # 6. Binding de variables anidado
-let(x)(10)(let(y)(20)(x + y))
 let x = 10 in let y = 20 in x + y
 
-# 7. Expresión condicional simple
-if(5 > 3)(42)
-- no va
 
-# 8. Expresión condicional con else
+# 7. Expresión condicional con else
 if(false) 10 
  else 20 
+end
 
-# 9. Conversión de tipos
+# 8. Conversión de tipos
 itos(42)
 rtos(3.14)
 
-# 10. Concatenación de strings
+# 9. Concatenación de strings
 "Hola" # " mundo"
 
-# 11. Concatenación con conversión
+# 10. Concatenación con conversión
  itos(42) # " es la respuesta"
 
-# 12. Print simple
+# 11. Print simple
 print("Hola mundo")
 
-# 13. Print con variable
-let(mensaje)("Buenos días")(print(mensaje))
+# 12. Print con variable
 let mensaje = "buenos dias" in print(mensaje)
 
-# 14. Operación compleja con variables y condicionales
-let(x)(10)(let(y)(5)(if(x > y)(x + y) else (x - y)))
-cambiar en el mismo
-# 15. Pares
-pair(1)(2)
-cambiar a (1 , 2) -> agregar token_coma
+# 13. Operación compleja con variables y condicionales
+let x = 11 in  if(x > 10)  print(x - 20)
+               else  print(x + 20)
+         end
 
-# 16. Números reales
+# 14. Operación compleja con variables y condicionales anidados
+let x = -100 in if(x > 0)  if(x < 50) 
+                  print("x es MENOR que 50") 
+                  else print("x es MAYOR que 50")
+                  end
+               else 
+                  if(x > -10) 
+                  print("x mayor que -10") 
+                  else print("x menor que -10")
+                  end
+               end
+                       
+#15. Variables anidadas declaradas.                    
+let x = 10 in if(x > 10)  let y = 5 in print(x - y)   
+              else let z = 20 in  print(x + z)  
+              end   
+
+#16. Pares
+let a = (x , y) in print(a)
+let a = (x , (y,  z)) in print(a)
+ pares con funciones fst y snd
+fun sum(x)
+    let dupla = snd(x) in
+        if(dubla != nullptr)
+            print(dupla + fst(x))
+        else
+            print(fst(x))
+        end    
+end
+
+#17. Números reales
 3.14 + 2.86
 
-# 17. Operación con módulo
+#18. Operación con módulo
 17 % 5
 
-# 18. Negación lógica
+#19. Negación lógica
 not false
 
-# 19. XOR lógico
+#20. XOR lógico
 true xor false
 
-# 20. Comparaciones múltiples
+#21. Comparaciones múltiples
 5 <= 10 and 3 >= 1
 
-#21. Funciones simples
-let(cuadrado)(fun(cuadrado)(x)(x * x ))
-(
-   print(cuadrado(5))
-)
-fun cuadrado(x) x*x
 
-#22. Funciones Recursivas
-let(cuadrado)(fun(cuadrado)(x)(x + 5 ))
-(
-   print(cuadrado(cuadrado(5)))
-)
-fun pow(x, y) if(y == 0) 1
-              else x * pow(x, y-1)
+#22. Funciones simples
+fun sum(x) if(x == 0) print("fin el ciclo")
+           else print(x)
+           end
+end
 
-#21. Funciones multiples
-let(def_cuadrado)(fun(cuadrado)(x)(x * x ))
-(
-    let(def_doble)(fun(doble)(x)(x + x ))
-    (
-        print(cuadrado(5) + doble(10))
-    ) 
-)
+#23. Funciones Recursivas
+fun sum(x)  if(x == 0) print("fin el ciclo")
+            else x+sum(x)
+            end
+    end
+
+
+
+#24. arrays
+    [, , ] -> buscar la forma de agregar un operador "add", "eliminar", ""
+
+#25.
+tupla -> 
+(x , y , z .....)    
+
+#26.
+_n(tupla) -> donde n el la posicion del elemento. si n es mayor a la cantidad de elementos "ERROR"
+
+[] -> internamente es el par vacio ()
+[1, 2 , 3 ] -> se representa con pares anidados (1, (2 , (3 , "end" ))) 
+
+add(0, l)  = [0, 1, 2 , 3 ] -> se representa con pares anidados (0, (l , "end" ))
+0 <+>  [1, 2 , 3 ]  = [0, 1, 2 , 3 ] -> se representa con pares anidados (0, (1, (2 , (3 , "end" )))) 
