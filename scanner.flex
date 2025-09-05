@@ -17,13 +17,13 @@ SPACE      [ \t\n]
 DIGIT      [0-9]
 LETTER     [A-Za-z] 
 INT     ({DIGIT}+)
-REAL ({DIGIT}+([.|,]{DIGIT}+))
+REAL ({DIGIT}+([.]{DIGIT}+))
 IDENTIFIER ({LETTER})({DIGIT}|{LETTER}|_)*
 TEXT       (\"({DIGIT}|{LETTER}|{SPACE}|[+\-*/])*\")
 COMMENTL (@@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*)
 COMMENTML   (\@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*\@)
 COMMENT ({COMMENTL}|{COMMENTML})
-NARRAY (_{DIGIT}+)
+NARRAY (<{DIGIT}+>)
 %%
 {SPACE} { }
 "#" { return TOKEN_CONCAT; }
@@ -70,7 +70,8 @@ NARRAY (_{DIGIT}+)
 "==" { return TOKEN_EQUAL; }
 "end" { return TOKEN_END;}
 "," { return TOKEN_COMA;}
-"<+>" { return TOKEN_ADDARRAY;}
+"<+>" { return TOKEN_ADD_ARRAY;}
+"<->" { return TOKEN_DEL_ARRAY;}
 {NARRAY} { return TOKEN_NARRAY; }
 
 

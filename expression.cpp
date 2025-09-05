@@ -97,6 +97,24 @@ std::string PrintExpression::get_type() const noexcept {
     return "print_expression";
 }
 
+BinaryOperation::BinaryOperation(Expression* e1, Expression* e2) noexcept
+    : left_expression{e1}, right_expression{e2} {}
+void BinaryOperation::destroy() noexcept {
+    if (left_expression) {
+        left_expression->destroy();
+        delete left_expression;
+        left_expression = nullptr;
+    }
+    if (right_expression) {
+        right_expression->destroy();
+        delete right_expression;
+        right_expression = nullptr;
+    }
+}
+std::string BinaryOperation::to_string() const noexcept {
+    return "("s + left_expression->to_string() + operand_str() + right_expression->to_string() + ")"s;
+}
+
 
 UnaryOperation::UnaryOperation(Expression* expr) noexcept : expression{expr} {}
 void UnaryOperation::destroy() noexcept {
@@ -323,12 +341,6 @@ std::string Array::get_type() const noexcept {
 bool Array::is_empty() const noexcept {
     return empty;
 }
-Expression* Array::get_head() const noexcept {
-    return head_expr;
-}
-Array* Array::get_tail() const noexcept {
-    return tail_array;
-}
 
 EmptyArray::EmptyArray() noexcept {}
 void EmptyArray::destroy() noexcept {}
@@ -352,6 +364,7 @@ std::string Head::operand_str() const noexcept {
 std::string Head::get_type() const noexcept {
     return "head";
 }
+
 Value_t Tail::eval(Environment* env) noexcept {
     auto val = expression->eval(env);
     return val;
@@ -361,6 +374,108 @@ std::string Tail::operand_str() const noexcept {
 }
 std::string Tail::get_type() const noexcept {
     return "tail";
+}
+
+
+
+Value_t NewAddArray::eval(Environment* env) noexcept
+{
+    if (!left_expression || !right_expression) {
+        return "[]";
+    }
+    
+    auto array_val = left_expression->eval(env);
+    auto new_elem_val = right_expression->eval(env);
+
+    std::string array_str = value_to_string(array_val);
+    std::string new_elem_str = value_to_string(new_elem_val);
+
+    if (array_str == "[]") {
+        return "[" + new_elem_str + "]";
+    } else {
+        return array_str.substr(0, array_str.size() - 2) + ", " + new_elem_str + "]";
+    }
+}
+std::string NewAddArray::operand_str() const noexcept
+{
+    return "<+>";
+}
+std::string NewAddArray::get_type() const noexcept
+{
+    return "additionArray";
+}
+
+
+Value_t NewDelArray::eval(Environment* env) noexcept
+{
+    if (!left_expression || !right_expression) {
+        return "[]";
+    }
+    
+    auto array_val = left_expression->eval(env);
+    auto del_elem_val = right_expression->eval(env);
+
+    std::string array_str = value_to_string(array_val);
+    std::string del_elem_str = value_to_string(del_elem_val);
+
+    // Si el array está vacío, no hay nada que eliminar
+    if (array_str == "[]") {
+        return "[]";
+    }
+    
+    // Eliminar los corchetes
+    std::string inner = array_str.substr(1, array_str.size() - 2);
+    
+    // Dividir los elementos por comas
+    std::vector<std::string> elements;
+    size_t start = 0;
+    size_t end = inner.find(',');
+    
+    while (end != std::string::npos) {
+        elements.push_back(inner.substr(start, end - start));
+        start = end + 1;
+        end = inner.find(',', start);
+    }
+    elements.push_back(inner.substr(start));
+    
+    // Eliminar espacios en blanco alrededor de cada elemento
+    for (auto& elem : elements) {
+        size_t first = elem.find_first_not_of(' ');
+        size_t last = elem.find_last_not_of(' ');
+        if (first != std::string::npos && last != std::string::npos) {
+            elem = elem.substr(first, last - first + 1);
+        }
+    }
+    
+    // Eliminar el elemento deseado
+    auto it = std::find(elements.begin(), elements.end(), del_elem_str);
+    if (it != elements.end()) {
+        elements.erase(it);
+    }
+    
+    // Reconstruir el array
+    if (elements.empty()) {
+        return "[]";
+    }
+    
+    std::string result = "[";
+    for (size_t i = 0; i < elements.size(); ++i) {
+        if (i != 0) {
+            result += ", ";
+        }
+        result += elements[i];
+    }
+    result += "]";
+    
+    return result;
+}
+std::string NewDelArray::operand_str() const noexcept
+{ 
+    return "<->";
+}
+std::string NewDelArray::get_type() const noexcept
+{
+    return "deltoArray";
 }
 
 
@@ -432,23 +547,6 @@ const std::string& Identifier::get_name() const noexcept {
     return name;
 }
 
-BinaryOperation::BinaryOperation(Expression* e1, Expression* e2) noexcept
-    : left_expression{e1}, right_expression{e2} {}
-void BinaryOperation::destroy() noexcept {
-    if (left_expression) {
-        left_expression->destroy();
-        delete left_expression;
-        left_expression = nullptr;
-    }
-    if (right_expression) {
-        right_expression->destroy();
-        delete right_expression;
-        right_expression = nullptr;
-    }
-}
-std::string BinaryOperation::to_string() const noexcept {
-    return "("s + left_expression->to_string() + operand_str() + right_expression->to_string() + ")"s;
-}
 
 
 Value_t Addition::eval(Environment* env) noexcept {
@@ -681,7 +779,6 @@ std::cout << "paso por first_expr" << first_expr << std::endl;
     return first_expr;
 }
 Expression* Pair::get_second() const noexcept {
-std::cout << "paso por get_second" << second_expr << std::endl;
     return second_expr;
 }
 
@@ -722,11 +819,11 @@ Value_t Second::eval(Environment* env) noexcept {
     auto val = expression->eval(env);
  
     std::string str = value_to_string(val);
-    std::cout << "Value_t Second" << str << std::endl;
-  std::cout << "str.length() = " << str.length() << std::endl;
+    /*std::cout << "Value_t Second" << str << std::endl;
+    std::cout << "str.length() = " << str.length() << std::endl;
     std::cout << "str[0] = " << str[0] << std::endl;
-  std::cout << "str.back() = " << str.back() << std::endl;
-
+    std::cout << "str.back() = " << str.back() << std::endl;
+*/
     if (str.length() > 2 && str[0] == '(' && str.back() == ')') {
         printf("(str.length() > 2 && str[0] == '(' && str.back() == ')'");
         size_t comma = str.find(", ");

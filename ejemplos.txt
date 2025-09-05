@@ -46,13 +46,14 @@ let x = 11 in  if(x > 10)  print(x - 20)
          end
 
 # 14. Operación compleja con variables y condicionales anidados
-let x = -100 in if(x > 0)  if(x < 50) 
-                  print("x es MENOR que 50") 
+let x = -100 in if(x > 0)  
+                  if(x < 50) 
+                    print("x es MENOR que 50") 
                   else print("x es MAYOR que 50")
                   end
                else 
                   if(x > -10) 
-                  print("x mayor que -10") 
+                    print("x mayor que -10") 
                   else print("x menor que -10")
                   end
                end
@@ -103,20 +104,17 @@ fun sum(x)  if(x == 0) print("fin el ciclo")
             end
     end
 
-
-
 #24. arrays
     [, , ] -> buscar la forma de agregar un operador "add", "eliminar", ""
 
-#25.
-tupla -> 
-(x , y , z .....)    
+#25. Add element to array
+<+>([2,3,4], y)
 
-#26.
-_n(tupla) -> donde n el la posicion del elemento. si n es mayor a la cantidad de elementos "ERROR"
+#26. del element to array, elimina el  elemento en la posicion y, si y es mejor a la cantidad de elemento del array, DARIA ERROR.
+<->([2,3,4], y)
 
-[] -> internamente es el par vacio ()
-[1, 2 , 3 ] -> se representa con pares anidados (1, (2 , (3 , "end" ))) 
-
-add(0, l)  = [0, 1, 2 , 3 ] -> se representa con pares anidados (0, (l , "end" ))
-0 <+>  [1, 2 , 3 ]  = [0, 1, 2 , 3 ] -> se representa con pares anidados (0, (1, (2 , (3 , "end" )))) 
+#27 head array
+    head(id) o head([1, 2 ,3 ,4 ,5 ])
+    
+#28 tail array
+        tail(id) o tail([1, 2 ,3 ,4 ,5 ])

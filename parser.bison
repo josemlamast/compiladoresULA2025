@@ -15,7 +15,6 @@
     Expression* parser_result{nullptr};
 %}
 
-
 %token TOKEN_EOF
 %token TOKEN_IF
 %token TOKEN_ELSE
@@ -77,9 +76,10 @@
 %token TOKEN_END
 
 %token  TOKEN_PRINT
-%token  TOKEN_NARRAY
 
-%token  TOKEN_ADDARRAY
+%token  TOKEN_DEL_ARRAY
+%token  TOKEN_ADD_ARRAY
+%token  TOKEN_NARRAY
 
 
 
@@ -134,7 +134,6 @@ unary_expr : TOKEN_NOT unary_expr                        { $$ = new LogicalNot($
 primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN           { $$ = $2; }
              | literal                                  { $$ = $1; }
              | function_call                            { $$ = $1; } 
-             | array_literal                            { $$ = $1; }
              | TOKEN_IDENTIFIER                         { $$ = new Identifier(last_identifier); }
              | TOKEN_FUN TOKEN_IDENTIFIER TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN  expr TOKEN_END
               {
@@ -173,11 +172,8 @@ array_literal : TOKEN_LCORCH elements TOKEN_RCORCH { $$ = $2; }
 
 elements : elements TOKEN_COMA expr 
                { 
-             // $1 es de tipo Array* (pero está declarado como Expression*)
-             // Hacemos un cast a Array* para el constructor
              Array* tail = dynamic_cast<Array*>($1);
              if (tail == nullptr) {
-                 // Manejar error si no es un Array (no debería pasar)
                  yyerror("Expected array in elements rule");
                  YYABORT;
              }
@@ -208,14 +204,19 @@ function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN
               | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN  expr  TOKEN_ELSE  expr  TOKEN_END
                 { $$ = new IfExpression($3, $5, $7); }
               | TOKEN_EMPTY
-                { $$ = new EmptyArray(); }
-            
+                { $$ = new EmptyArray(); }            
               | TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
-              {$$ = new FunctionCall(new Identifier(last_identifier) , $3); }
-                | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
+                {$$ = new FunctionCall(new Identifier(last_identifier) , $3); }
+              | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
                 { $$ = new Head($3); }
               | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN
                 { $$ = new Tail($3); }
+              |TOKEN_ADD_ARRAY TOKEN_LPAREN array_literal TOKEN_COMA expr  TOKEN_RPAREN 
+              { $$ = new NewAddArray($3, new Identifier(last_identifier)); } 
+              |TOKEN_DEL_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr  TOKEN_RPAREN 
+              { $$ = new NewDelArray($3, new Identifier(last_identifier)); } 
+              |TOKEN_DEL_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr  TOKEN_RPAREN 
+              { $$ = new NewDelArray($3, new Identifier(last_identifier)); } 
               ;
                           
 
@@ -226,16 +227,3 @@ int yyerror(const char* s) {
     printf("Parse error: %s\n", s);
         return 1;
     } 
-
-    /*              | TOKEN_FUN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN primary_expr TOKEN_RPAREN TOKEN_LPAREN expr TOKEN_RPAREN
-              {
-                Identifier* func_name = dynamic_cast<Identifier*>($3);
-                Identifier* param_name = dynamic_cast<Identifier*>($6);
-                if(func_name && param_name){
-                    $$ = new FunctionDefinition(func_name, param_name, $9);
-                }
-                else{
-                    yyerror("func name and parameters must to be Identifier");
-                    YYERROR;
-                }                
-              }*/

@@ -3,6 +3,8 @@
 #include <string>
 #include <map>
 #include <iostream>
+#include <vector>
+#include <algorithm>
 
 class Environment;
 using Value_t = std::variant<int, double, bool, std::string>;
@@ -130,8 +132,6 @@ public:
     std::string to_string() const noexcept override;
     std::string get_type() const noexcept override;
     bool is_empty() const noexcept;
-    Expression* get_head() const noexcept;
-    Array* get_tail() const noexcept;
 
 private:
     Expression* head_expr;
@@ -167,7 +167,23 @@ public:
     std::string get_type() const noexcept override;
 };
 
+class NewAddArray : public BinaryOperation
+{
+public:
+    using BinaryOperation::BinaryOperation;
+    Value_t eval(Environment* env = nullptr) noexcept override;
+    std::string operand_str() const noexcept override;
+    std::string get_type() const noexcept override;
+};
 
+class NewDelArray : public BinaryOperation
+{
+public:
+    using BinaryOperation::BinaryOperation;
+    Value_t eval(Environment* env) noexcept override;
+    std::string operand_str() const noexcept override;
+    std::string get_type() const noexcept override;
+};
 
 class IntegerValue : public Expression
 {
