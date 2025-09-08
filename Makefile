@@ -1,12 +1,16 @@
-CXX = g++
+CXX = clang++ -std=c++17 -O0 -g
 FLEX = flex
 BISON = bison --defines=token.h
 
-all: interpreter
+OBJ = ast_node_interface.o datatype.o declaration.o expression.o statement.o symbol_table.o parser.o scanner.o
 
-interpreter: parser.o scanner.o main.o expression.o
-	$(CXX) scanner.o parser.o main.o expression.o -o interpreter
+default: main
 
+all: main
+
+main: $(OBJ) main.cpp
+	$(CXX) -I. $@.cpp -o $@ $(OBJ)
+	
 parser.o: parser.c
 	$(CXX) -c -I. -std=c++17 parser.c
 
@@ -22,9 +26,24 @@ scanner.c: scanner.flex
 main.o: token.h main.c
 	$(CXX) -c -I. -std=c++17 main.c
 
-expression.o: expression.hpp expression.cpp
-	$(CXX) -c -I. -std=c++17 expression.cpp
+ast_node_interface.o: ast_node_interface.cpp ast_node_interface.hpp 
+	$(CXX) -I. -c $< -o $@
+
+datatype.o: datatype.cpp datatype.hpp 
+	$(CXX) -I. -c $< -o $@
+
+declaration.o: declaration.cpp declaration.hpp 
+	$(CXX) -I. -c $< -o $@
+
+expression.o: expression.cpp expression.hpp 
+	$(CXX) -I. -c $< -o $@
+
+statement.o: statement.cpp statement.hpp 
+	$(CXX) -I. -c $< -o $@
+
+symbol_table.o: symbol_table.cpp symbol_table.hpp 
+	$(CXX) -I. -c $< -o $@
 
 .PHONY:
 clean:
-	$(RM) *.o parser.c parser.output token.h scanner.c interpreter
+	$(RM) $(OBJ) main
