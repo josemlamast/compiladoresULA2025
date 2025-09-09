@@ -65,26 +65,6 @@ private:
     Body else_body;
 };
 
-class ForStatement : public ExpressionStatement
-{
-public:
-    ForStatement(Expression* init_expr, Expression* ctrl_expr, Expression* next_expr, const Body& _body) noexcept;
-
-    void destroy() noexcept override;
-
-    ASTNodeInterface* copy() const noexcept override;
-
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-
-    bool resolve_name(SymbolTable& symbol_table) noexcept override;
-
-private:
-    Expression* init_expression;
-    Expression* next_expression;
-    Body body;
-};
 
 class BlockStatement : public Statement
 {

@@ -1,1 +1,11 @@
-2 2 2
+fun sum(x) 
+    fst(x) + snd(x)
+end
+
+
+let x = 10 in if(x > 10)  
+                let y = 5 in print(sum( (x ,y ) ) )   
+              else 
+                let z = 20 in  print(x + z)  
+              end
+end

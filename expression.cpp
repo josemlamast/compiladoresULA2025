@@ -28,6 +28,7 @@ Expression* UnaryExpression::get_expression() const noexcept
     return this->expression;
 }
 
+
 ASTNodeInterface* NotExpression::copy() const noexcept
 {
     return new NotExpression{dynamic_cast<Expression*>(this->expression->copy())};
@@ -55,6 +56,8 @@ std::pair<bool, Datatype*> NotExpression::type_check() const noexcept
     return std::make_pair(true, new BooleanDatatype{});
 }
 
+
+////////////////////////////////////////////////////////////
 ASTNodeInterface* IncrementExpression::copy() const noexcept
 {
     return new IncrementExpression{dynamic_cast<Expression*>(this->expression->copy())};
@@ -82,6 +85,7 @@ std::pair<bool, Datatype*> IncrementExpression::type_check() const noexcept
     return std::make_pair(true, new IntegerDatatype{});
 }
 
+
 ASTNodeInterface* DecrementExpression::copy() const noexcept
 {
     return new DecrementExpression{dynamic_cast<Expression*>(this->expression->copy())};
@@ -108,6 +112,8 @@ std::pair<bool, Datatype*> DecrementExpression::type_check() const noexcept
 
     return std::make_pair(true, new IntegerDatatype{});
 }
+
+////////////////////////////////////////////////////////////
 
 BinaryExpression::BinaryExpression(Expression* left_expr, Expression* right_expr) noexcept
     : left_expression{left_expr}, right_expression{right_expr} {}
@@ -284,6 +290,23 @@ bool AndExpression::equal(ASTNodeInterface* other) const noexcept
 
 std::pair<bool, Datatype*> AndExpression::type_check() const noexcept
 {
+    return this->boolean_operation_type_check();
+}
+
+
+ASTNodeInterface* XorExpression::copy() const noexcept {
+    return new XorExpression{
+        dynamic_cast<Expression*>(this->left_expression->copy()),
+        dynamic_cast<Expression*>(this->right_expression->copy())
+    };
+}
+
+bool XorExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<XorExpression*>(other);
+    return other_expr != nullptr && BinaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> XorExpression::type_check() const noexcept {
     return this->boolean_operation_type_check();
 }
 
@@ -745,6 +768,27 @@ std::pair<bool, Datatype*> NameExpression::type_check() const noexcept
     return std::make_pair(true, dynamic_cast<Datatype*>(this->symbol->type->copy()));    
 }
 
+
+RealExpression::RealExpression(double _value) noexcept
+    : value{_value} {}
+
+ASTNodeInterface* RealExpression::copy() const noexcept
+{
+    return new RealExpression{this->value};
+}
+
+bool RealExpression::equal(ASTNodeInterface* other) const noexcept
+{
+    auto other_expr = dynamic_cast<RealExpression*>(other);
+    return other_expr != nullptr && this->value == other_expr->value;
+}
+
+std::pair<bool, Datatype*> RealExpression::type_check() const noexcept
+{
+    return std::make_pair(true, new RealDatatype{});
+}
+
+
 IntExpression::IntExpression(int _value) noexcept
     : value{_value} {}
 
@@ -764,6 +808,27 @@ std::pair<bool, Datatype*> IntExpression::type_check() const noexcept
     return std::make_pair(true, new IntegerDatatype{});
 }
 
+
+BoolExpression::BoolExpression(bool _value) noexcept  : value{_value} {}
+
+ASTNodeInterface* BoolExpression::copy() const noexcept
+{
+    return new BoolExpression{this->value};
+}
+
+bool BoolExpression::equal(ASTNodeInterface* other) const noexcept
+{
+    auto other_expr = dynamic_cast<BoolExpression*>(other);
+    return other_expr != nullptr && this->value == other_expr->value;
+}
+
+std::pair<bool, Datatype*> BoolExpression::type_check() const noexcept
+{
+    return std::make_pair(true, new BooleanDatatype{});
+}
+
+
+
 StrExpression::StrExpression(std::string_view _value) noexcept
     : value{_value} {}
 
@@ -781,4 +846,516 @@ bool StrExpression::equal(ASTNodeInterface* other) const noexcept
 std::pair<bool, Datatype*> StrExpression::type_check() const noexcept
 {
     return std::make_pair(true, new StringDatatype{});    
+}
+
+
+ASTNodeInterface* ConcatExpression::copy() const noexcept {
+    return new ConcatExpression{
+        dynamic_cast<Expression*>(this->left_expression->copy()),
+        dynamic_cast<Expression*>(this->right_expression->copy())
+    };
+}
+
+bool ConcatExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<ConcatExpression*>(other);
+    return other_expr != nullptr && BinaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> ConcatExpression::type_check() const noexcept {
+    auto left_type = this->left_expression->type_check();
+    auto right_type = this->right_expression->type_check();
+
+
+    bool result = left_type.first && right_type.first &&
+                 left_type.second->is<StringDatatype>() && 
+                 right_type.second->is<StringDatatype>();
+    
+    left_type.second->destroy();
+    delete left_type.second;
+    right_type.second->destroy();
+    delete right_type.second;
+    
+    if (!result) {
+        return std::make_pair(false, nullptr);
+    }    
+    return std::make_pair(true, new StringDatatype{});
+}
+
+
+ASTNodeInterface* NegExpression::copy() const noexcept {
+    return new NegExpression{dynamic_cast<Expression*>(this->expression->copy())};
+}
+
+bool NegExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<NegExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> NegExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    bool result = expr_type.first && expr_type.second->is<RealDatatype>();
+    
+    expr_type.second->destroy();
+    delete expr_type.second;
+    
+    if (!result) {
+        return std::make_pair(false, nullptr);
+    }
+    
+    return std::make_pair(true, new RealDatatype{});
+}
+
+
+ASTNodeInterface* PrintExpression::copy() const noexcept {
+    return new PrintExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool PrintExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<PrintExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> PrintExpression::type_check() const noexcept {
+    // Print can accept any type, so we just check that the expression is valid
+    auto expr_type = this->expression->type_check();
+    bool result = expr_type.first;
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, new VoidDatatype());
+}
+
+
+
+ASTNodeInterface* FstExpression::copy() const noexcept {
+    return new FstExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool FstExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<FstExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> FstExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is a pair type
+    // For now, we'll assume it returns the first element's type
+    // You'll need to implement proper pair type checking
+    
+    bool result = expr_type.first;
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // This is a placeholder - you need to implement proper pair type checking
+        return_type = new IntegerDatatype(); // Default return type
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+ASTNodeInterface* SndExpression::copy() const noexcept {
+    return new SndExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool SndExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<SndExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> SndExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    bool result = expr_type.first;
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // This is a placeholder - you need to implement proper pair type checking
+        return_type = new IntegerDatatype(); // Default return type
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+ASTNodeInterface* HeadExpression::copy() const noexcept {
+    return new HeadExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool HeadExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<HeadExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> HeadExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is an array type
+    bool result = expr_type.first && expr_type.second->is<HeadExpression>();
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        auto array_type = dynamic_cast<ArrayDatatype*>(expr_type.second);
+        return_type = dynamic_cast<Datatype*>(array_type->get_inner_datatype()->copy());
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+ASTNodeInterface* TailExpression::copy() const noexcept {
+    return new TailExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool TailExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<TailExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> TailExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is an array type
+    bool result = expr_type.first && expr_type.second->is<TailExpression>();
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // Tail returns the same array type without the first element
+        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+
+ASTNodeInterface* RtoSExpression::copy() const noexcept {
+    return new RtoSExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool RtoSExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<RtoSExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> RtoSExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is an array type
+    bool result = expr_type.first && expr_type.second->is<RealDatatype>();
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // Tail returns the same array type without the first element
+        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+ASTNodeInterface* ItoSExpression::copy() const noexcept {
+    return new ItoSExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool ItoSExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<ItoSExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> ItoSExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is an array type
+    bool result = expr_type.first && expr_type.second->is<IntegerDatatype>();
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // Tail returns the same array type without the first element
+        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+ASTNodeInterface* ItoRExpression::copy() const noexcept {
+    return new ItoRExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool ItoRExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<ItoRExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> ItoRExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is an array type
+    bool result = expr_type.first && expr_type.second->is<IntegerDatatype>();
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // Tail returns the same array type without the first element
+        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+ASTNodeInterface* RtoIExpression::copy() const noexcept {
+    return new ItoSExpression(dynamic_cast<Expression*>(this->expression->copy()));
+}
+
+bool RtoIExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<RtoIExpression*>(other);
+    return other_expr != nullptr && UnaryExpression::equal(other);
+}
+
+std::pair<bool, Datatype*> RtoIExpression::type_check() const noexcept {
+    auto expr_type = this->expression->type_check();
+    
+    // Check if the expression is an array type
+    bool result = expr_type.first && expr_type.second->is<RealDatatype>();
+    Datatype* return_type = nullptr;
+    
+    if (result) {
+        // Tail returns the same array type without the first element
+        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
+    }
+    
+    if (expr_type.second != nullptr) {
+        expr_type.second->destroy();
+        delete expr_type.second;
+    }
+    
+    return std::make_pair(result, return_type);
+}
+
+
+
+
+
+
+ASTNodeInterface* ArrayAddExpression::copy() const noexcept {
+    return new ArrayAddExpression{
+        dynamic_cast<Expression*>(this->left_expression->copy()),
+        dynamic_cast<Expression*>(this->right_expression->copy())
+    };
+}
+
+std::pair<bool, Datatype*> ArrayAddExpression::type_check() const noexcept {
+    auto left_type = this->left_expression->type_check();
+    auto right_type = this->right_expression->type_check();
+
+    // Verificar que el izquierdo sea un array y el derecho sea del tipo interno del array
+    bool result = left_type.first && right_type.first &&
+                 left_type.second->is<ArrayDatatype>() &&
+                 dynamic_cast<ArrayDatatype*>(left_type.second)->get_inner_datatype()->equal(right_type.second);
+
+    if (result) {
+        // Retornar el mismo tipo de array
+        Datatype* return_type = dynamic_cast<Datatype*>(left_type.second->copy());
+        left_type.second->destroy();
+        delete left_type.second;
+        right_type.second->destroy();
+        delete right_type.second;
+        return std::make_pair(true, return_type);
+    }
+
+    // Limpiar memoria en caso de error
+    if (left_type.second != nullptr) {
+        left_type.second->destroy();
+        delete left_type.second;
+    }
+    if (right_type.second != nullptr) {
+        right_type.second->destroy();
+        delete right_type.second;
+    }
+    return std::make_pair(false, nullptr);
+}
+
+bool ArrayAddExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<ArrayAddExpression*>(other);
+    return other_expr != nullptr && BinaryExpression::equal(other);
+}
+
+ASTNodeInterface* ArrayDelExpression::copy() const noexcept {
+    return new ArrayDelExpression{
+        dynamic_cast<Expression*>(this->left_expression->copy()),
+        dynamic_cast<Expression*>(this->right_expression->copy())
+    };
+}
+
+std::pair<bool, Datatype*> ArrayDelExpression::type_check() const noexcept {
+    auto left_type = this->left_expression->type_check();
+    auto right_type = this->right_expression->type_check();
+
+    // Verificar que el izquierdo sea un array y el derecho sea entero (índice)
+    bool result = left_type.first && right_type.first &&
+                 left_type.second->is<ArrayDatatype>() &&
+                 right_type.second->is<IntegerDatatype>();
+
+    if (result) {
+        // Retornar el mismo tipo de array
+        Datatype* return_type = dynamic_cast<Datatype*>(left_type.second->copy());
+        left_type.second->destroy();
+        delete left_type.second;
+        right_type.second->destroy();
+        delete right_type.second;
+        return std::make_pair(true, return_type);
+    }
+
+    // Limpiar memoria en caso de error
+    if (left_type.second != nullptr) {
+        left_type.second->destroy();
+        delete left_type.second;
+    }
+    if (right_type.second != nullptr) {
+        right_type.second->destroy();
+        delete right_type.second;
+    }
+    return std::make_pair(false, nullptr);
+}
+
+bool ArrayDelExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<ArrayDelExpression*>(other);
+    return other_expr != nullptr && BinaryExpression::equal(other);
+}
+
+
+IfElseExpression::IfElseExpression(Expression* cond, Expression* true_expr, Expression* false_expr) noexcept
+    : condition{cond}, true_expression{true_expr}, false_expression{false_expr} {}
+
+void IfElseExpression::destroy() noexcept {
+    this->condition->destroy();
+    delete this->condition;
+    this->condition = nullptr;
+
+    this->true_expression->destroy();
+    delete this->true_expression;
+    this->true_expression = nullptr;
+
+    if (this->false_expression != nullptr) {
+        this->false_expression->destroy();
+        delete this->false_expression;
+        this->false_expression = nullptr;
+    }
+}
+
+ASTNodeInterface* IfElseExpression::copy() const noexcept {
+    return new IfElseExpression{
+        dynamic_cast<Expression*>(this->condition->copy()),
+        dynamic_cast<Expression*>(this->true_expression->copy()),
+        this->false_expression == nullptr ? nullptr : dynamic_cast<Expression*>(this->false_expression->copy())
+    };
+}
+
+bool IfElseExpression::equal(ASTNodeInterface* other) const noexcept {
+    auto other_expr = dynamic_cast<IfElseExpression*>(other);
+    if (other_expr == nullptr) return false;
+    
+    bool cond_equal = this->condition->equal(other_expr->condition);
+    bool true_equal = this->true_expression->equal(other_expr->true_expression);
+    bool false_equal = (this->false_expression == nullptr && other_expr->false_expression == nullptr) ||
+                       (this->false_expression != nullptr && other_expr->false_expression != nullptr &&
+                        this->false_expression->equal(other_expr->false_expression));
+    
+    return cond_equal && true_equal && false_equal;
+}
+
+std::pair<bool, Datatype*> IfElseExpression::type_check() const noexcept {
+    auto cond_type = this->condition->type_check();
+    if (!cond_type.first || !cond_type.second->is<BooleanDatatype>()) {
+        if (cond_type.second != nullptr) {
+            cond_type.second->destroy();
+            delete cond_type.second;
+        }
+        return std::make_pair(false, nullptr);
+    }
+    cond_type.second->destroy();
+    delete cond_type.second;
+
+    auto true_type = this->true_expression->type_check();
+    if (!true_type.first) {
+        return std::make_pair(false, nullptr);
+    }
+
+    if (this->false_expression == nullptr) {
+        // If without else returns void
+        if (true_type.second != nullptr) {
+            true_type.second->destroy();
+            delete true_type.second;
+        }
+        return std::make_pair(true, new VoidDatatype());
+    }
+
+    auto false_type = this->false_expression->type_check();
+    if (!false_type.first) {
+        if (true_type.second != nullptr) {
+            true_type.second->destroy();
+            delete true_type.second;
+        }
+        return std::make_pair(false, nullptr);
+    }
+
+    // Both branches should have the same type
+    if (!true_type.second->equal(false_type.second)) {
+        true_type.second->destroy();
+        delete true_type.second;
+        false_type.second->destroy();
+        delete false_type.second;
+        return std::make_pair(false, nullptr);
+    }
+
+    false_type.second->destroy();
+    delete false_type.second;
+    return std::make_pair(true, true_type.second);
+}
+
+bool IfElseExpression::resolve_name(SymbolTable& symbol_table) noexcept {
+    bool cond_res = this->condition->resolve_name(symbol_table);
+    bool true_res = this->true_expression->resolve_name(symbol_table);
+    bool false_res = this->false_expression == nullptr ? true : this->false_expression->resolve_name(symbol_table);
+    return cond_res && true_res && false_res;
 }

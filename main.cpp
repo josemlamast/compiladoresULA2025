@@ -9,18 +9,10 @@
 #include "statement.hpp"
 #include "ast_node_interface.hpp"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <iostream>
-#include <variant>
-#include <expression.hpp>
-
 extern FILE* yyin;
 extern int yyparse();
-extern Expression* parser_result;
+extern ASTNodeInterface* parser_result;
 extern void cleanup_lexer();
-
-
 
 int main(int argc, char* argv[])
 {
@@ -36,7 +28,7 @@ int main(int argc, char* argv[])
     
     int result = yyparse();
 
-    if (result == 0 && parser_result == 0)
+    if (result == 0 )
         printf("Parse ok!\n");
     else
     {

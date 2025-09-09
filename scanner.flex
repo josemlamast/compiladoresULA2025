@@ -52,14 +52,12 @@ NARRAY (<{DIGIT}+>)
 "or" { return TOKEN_OR; }
 "not" { return TOKEN_NOT; }
 "xor" { return TOKEN_XOR; }
-"val" { return TOKEN_VAL; }
 "let" { return TOKEN_LET; }
 "true" { return TOKEN_TRUE; }
 "false" { return TOKEN_FALSE; }
 "in" { return TOKEN_IN; }
 "fun" { return TOKEN_FUN; }
 "print" { return TOKEN_PRINT; }
-"pair" { return TOKEN_PAIR; }
 "fst" { return TOKEN_FST; }
 "snd" { return TOKEN_SND; }
 "<" { return TOKEN_LESS; }

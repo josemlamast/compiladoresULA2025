@@ -22,6 +22,7 @@ bool VoidDatatype::equal(ASTNodeInterface* other) const noexcept
     return dynamic_cast<VoidDatatype*>(other) != nullptr;
 }
 
+
 ASTNodeInterface* BooleanDatatype::copy() const noexcept 
 {
     return new BooleanDatatype{};
@@ -31,6 +32,7 @@ bool BooleanDatatype::equal(ASTNodeInterface* other) const noexcept
 {
     return dynamic_cast<BooleanDatatype*>(other) != nullptr;
 }
+
 
 ASTNodeInterface* CharacterDatatype::copy() const noexcept 
 {
@@ -42,6 +44,18 @@ bool CharacterDatatype::equal(ASTNodeInterface* other) const noexcept
     return dynamic_cast<CharacterDatatype*>(other) != nullptr;
 }
 
+
+ASTNodeInterface* RealDatatype::copy() const noexcept 
+{
+    return new RealDatatype{};
+}
+
+bool RealDatatype::equal(ASTNodeInterface* other) const noexcept
+{
+    return dynamic_cast<RealDatatype*>(other) != nullptr;
+}
+
+
 ASTNodeInterface* IntegerDatatype::copy() const noexcept 
 {
     return new IntegerDatatype{};
@@ -52,6 +66,7 @@ bool IntegerDatatype::equal(ASTNodeInterface* other) const noexcept
     return dynamic_cast<IntegerDatatype*>(other) != nullptr;
 }
 
+
 ASTNodeInterface* StringDatatype::copy() const noexcept 
 {
     return new StringDatatype{};
@@ -61,6 +76,7 @@ bool StringDatatype::equal(ASTNodeInterface* other) const noexcept
 {
     return dynamic_cast<StringDatatype*>(other) != nullptr;
 }
+
 
 ArrayDatatype::ArrayDatatype(Datatype* _inner_datatype) noexcept
     : inner_datatype{_inner_datatype} {}
@@ -87,6 +103,7 @@ bool ArrayDatatype::resolve_name(SymbolTable& symbol_table) noexcept
 {
     return this->inner_datatype->resolve_name(symbol_table);
 }
+
 
 Datatype* ArrayDatatype::get_inner_datatype() const noexcept
 {

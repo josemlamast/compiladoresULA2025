@@ -54,6 +54,15 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 };
 
+class RealDatatype : public BasicDatatype
+{
+public:
+    ASTNodeInterface* copy() const noexcept override;
+
+    bool equal(ASTNodeInterface* other) const noexcept override;
+};
+
+
 class StringDatatype : public BasicDatatype
 {
 public:
