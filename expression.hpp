@@ -561,6 +561,41 @@ private:
     Expression* body;
 };
 
+class ValExpression : public Expression
+{
+public:
+    ValExpression(const std::string& _name, Expression* _value) noexcept;
+    ~ValExpression() noexcept override;
+    void destroy() noexcept override;
+    
+    ASTNodeInterface* copy() const noexcept override;
+    bool equal(ASTNodeInterface* other) const noexcept override;
+    bool resolve_name(SymbolTable& symbol_table) noexcept override;
+    std::pair<bool, Datatype*> type_check() const noexcept override;
+    
+private:
+    std::string name;
+    Expression* value;
+};
+
+class IfExpression : public Expression
+{
+public:
+    IfExpression(Expression* _condition, Expression* _then_expr, Expression* _else_expr) noexcept;
+    ~IfExpression() noexcept override;
+    void destroy() noexcept override;
+    
+    ASTNodeInterface* copy() const noexcept override;
+    bool equal(ASTNodeInterface* other) const noexcept override;
+    bool resolve_name(SymbolTable& symbol_table) noexcept override;
+    std::pair<bool, Datatype*> type_check() const noexcept override;
+    
+private:
+    Expression* condition;
+    Expression* then_expr;
+    Expression* else_expr;
+};
+
 class FunctionExpression : public Expression
 {
 public:

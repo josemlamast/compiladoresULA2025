@@ -71,6 +71,8 @@ int main(int argc, char* argv[])
                     printf("Function\n");
                 else if (type_result.second->is<VoidDatatype>())
                     printf("Void\n");
+                else if (type_result.second->is<PairDatatype>())
+                    printf("Pair\n");
                 else
                     printf("Unknown\n");
                 

@@ -909,13 +909,8 @@ std::pair<bool, Datatype*> PairExpression::type_check() const noexcept
         return std::make_pair(false, nullptr);
     }
     
-    // Para simplificar, asumimos que un par tiene tipo Void
-    first_type.second->destroy();
-    delete first_type.second;
-    second_type.second->destroy();
-    delete second_type.second;
-    
-    return std::make_pair(true, new VoidDatatype{});
+    // Crear un PairDatatype con los tipos de los elementos
+    return std::make_pair(true, new PairDatatype{first_type.second, second_type.second});
 }
 
 // ConcatExpression
@@ -1148,17 +1143,28 @@ bool FstExpression::equal(ASTNodeInterface* other) const noexcept
 
 std::pair<bool, Datatype*> FstExpression::type_check() const noexcept
 {
-    // Para simplificar, asumimos que fst retorna Void
     auto expr_type = this->expression->type_check();
     if (!expr_type.first)
     {
         return std::make_pair(false, nullptr);
     }
     
+    // Verificar que la expresión es un par
+    if (!expr_type.second->is<PairDatatype>())
+    {
+        expr_type.second->destroy();
+        delete expr_type.second;
+        return std::make_pair(false, nullptr);
+    }
+    
+    // Retornar el tipo del primer elemento del par
+    auto pair_type = dynamic_cast<PairDatatype*>(expr_type.second);
+    auto first_type = dynamic_cast<Datatype*>(pair_type->get_first_type()->copy());
+    
     expr_type.second->destroy();
     delete expr_type.second;
     
-    return std::make_pair(true, new VoidDatatype{});
+    return std::make_pair(true, first_type);
 }
 
 // SndExpression
@@ -1175,17 +1181,28 @@ bool SndExpression::equal(ASTNodeInterface* other) const noexcept
 
 std::pair<bool, Datatype*> SndExpression::type_check() const noexcept
 {
-    // Para simplificar, asumimos que snd retorna Void
     auto expr_type = this->expression->type_check();
     if (!expr_type.first)
     {
         return std::make_pair(false, nullptr);
     }
     
+    // Verificar que la expresión es un par
+    if (!expr_type.second->is<PairDatatype>())
+    {
+        expr_type.second->destroy();
+        delete expr_type.second;
+        return std::make_pair(false, nullptr);
+    }
+    
+    // Retornar el tipo del segundo elemento del par
+    auto pair_type = dynamic_cast<PairDatatype*>(expr_type.second);
+    auto second_type = dynamic_cast<Datatype*>(pair_type->get_second_type()->copy());
+    
     expr_type.second->destroy();
     delete expr_type.second;
     
-    return std::make_pair(true, new VoidDatatype{});
+    return std::make_pair(true, second_type);
 }
 
 // PrintExpression
@@ -1536,4 +1553,203 @@ std::pair<bool, Datatype*> FunctionExpression::type_check() const noexcept
     temp_table.exit_scope();
     
     return std::make_pair(true, function_type);
+}
+
+// ValExpression
+ValExpression::ValExpression(const std::string& _name, Expression* _value) noexcept
+    : name{_name}, value{_value} {}
+
+ValExpression::~ValExpression() noexcept
+{
+    this->destroy();
+}
+
+void ValExpression::destroy() noexcept
+{
+    if (this->value != nullptr)
+    {
+        this->value->destroy();
+        delete this->value;
+        this->value = nullptr;
+    }
+}
+
+ASTNodeInterface* ValExpression::copy() const noexcept
+{
+    return new ValExpression{this->name, dynamic_cast<Expression*>(this->value->copy())};
+}
+
+bool ValExpression::equal(ASTNodeInterface* other) const noexcept
+{
+    auto other_val = dynamic_cast<ValExpression*>(other);
+    if (other_val == nullptr)
+        return false;
+    
+    return this->name == other_val->name && this->value->equal(other_val->value);
+}
+
+bool ValExpression::resolve_name(SymbolTable& symbol_table) noexcept
+{
+    printf("DEBUG: ValExpression::resolve_name for '%s'\n", this->name.c_str());
+    
+    // Resolver el valor primero
+    if (!this->value->resolve_name(symbol_table))
+    {
+        printf("DEBUG: Value resolution for '%s': FAILED\n", this->name.c_str());
+        return false;
+    }
+    
+    // Crear el símbolo con el tipo inferido del valor
+    auto value_type = this->value->type_check();
+    if (!value_type.first)
+    {
+        printf("DEBUG: Type checking for value of '%s': FAILED\n", this->name.c_str());
+        return false;
+    }
+    
+    // Bind la variable en el scope global
+    auto symbol = Symbol::build(value_type.second, this->name);
+    if (!symbol_table.bind(this->name, symbol))
+    {
+        printf("DEBUG: Binding '%s' in global scope: FAILED\n", this->name.c_str());
+        value_type.second->destroy();
+        delete value_type.second;
+        return false;
+    }
+    
+    printf("DEBUG: Bound '%s' in global scope\n", this->name.c_str());
+    value_type.second->destroy();
+    delete value_type.second;
+    
+    return true;
+}
+
+std::pair<bool, Datatype*> ValExpression::type_check() const noexcept
+{
+    // Val retorna el tipo del valor asignado
+    return this->value->type_check();
+}
+
+// IfExpression
+IfExpression::IfExpression(Expression* _condition, Expression* _then_expr, Expression* _else_expr) noexcept
+    : condition{_condition}, then_expr{_then_expr}, else_expr{_else_expr} {}
+
+IfExpression::~IfExpression() noexcept
+{
+    this->destroy();
+}
+
+void IfExpression::destroy() noexcept
+{
+    if (this->condition != nullptr)
+    {
+        this->condition->destroy();
+        delete this->condition;
+        this->condition = nullptr;
+    }
+    if (this->then_expr != nullptr)
+    {
+        this->then_expr->destroy();
+        delete this->then_expr;
+        this->then_expr = nullptr;
+    }
+    if (this->else_expr != nullptr)
+    {
+        this->else_expr->destroy();
+        delete this->else_expr;
+        this->else_expr = nullptr;
+    }
+}
+
+ASTNodeInterface* IfExpression::copy() const noexcept
+{
+    return new IfExpression{
+        dynamic_cast<Expression*>(this->condition->copy()),
+        dynamic_cast<Expression*>(this->then_expr->copy()),
+        dynamic_cast<Expression*>(this->else_expr->copy())
+    };
+}
+
+bool IfExpression::equal(ASTNodeInterface* other) const noexcept
+{
+    auto other_if = dynamic_cast<IfExpression*>(other);
+    if (other_if == nullptr)
+        return false;
+    
+    return this->condition->equal(other_if->condition) &&
+           this->then_expr->equal(other_if->then_expr) &&
+           this->else_expr->equal(other_if->else_expr);
+}
+
+bool IfExpression::resolve_name(SymbolTable& symbol_table) noexcept
+{
+    printf("DEBUG: IfExpression::resolve_name\n");
+    
+    bool condition_result = this->condition->resolve_name(symbol_table);
+    bool then_result = this->then_expr->resolve_name(symbol_table);
+    bool else_result = this->else_expr->resolve_name(symbol_table);
+    
+    printf("DEBUG: IfExpression resolution - condition: %s, then: %s, else: %s\n",
+           condition_result ? "SUCCESS" : "FAILED",
+           then_result ? "SUCCESS" : "FAILED",
+           else_result ? "SUCCESS" : "FAILED");
+    
+    return condition_result && then_result && else_result;
+}
+
+std::pair<bool, Datatype*> IfExpression::type_check() const noexcept
+{
+    printf("DEBUG: IfExpression::type_check\n");
+    
+    // Verificar que la condición es booleana
+    auto condition_type = this->condition->type_check();
+    if (!condition_type.first || !condition_type.second->is<BooleanDatatype>())
+    {
+        printf("DEBUG: IfExpression condition type check: FAILED\n");
+        if (condition_type.second != nullptr)
+        {
+            condition_type.second->destroy();
+            delete condition_type.second;
+        }
+        return std::make_pair(false, nullptr);
+    }
+    condition_type.second->destroy();
+    delete condition_type.second;
+    
+    // Verificar que ambas ramas tienen el mismo tipo
+    auto then_type = this->then_expr->type_check();
+    auto else_type = this->else_expr->type_check();
+    
+    if (!then_type.first || !else_type.first)
+    {
+        printf("DEBUG: IfExpression branch type check: FAILED\n");
+        if (then_type.second != nullptr)
+        {
+            then_type.second->destroy();
+            delete then_type.second;
+        }
+        if (else_type.second != nullptr)
+        {
+            else_type.second->destroy();
+            delete else_type.second;
+        }
+        return std::make_pair(false, nullptr);
+    }
+    
+    // Verificar que ambos tipos son iguales
+    if (!then_type.second->equal(else_type.second))
+    {
+        printf("DEBUG: IfExpression type mismatch: FAILED\n");
+        then_type.second->destroy();
+        delete then_type.second;
+        else_type.second->destroy();
+        delete else_type.second;
+        return std::make_pair(false, nullptr);
+    }
+    
+    printf("DEBUG: IfExpression type check: SUCCESS\n");
+    else_type.second->destroy();
+    delete else_type.second;
+    
+    return std::make_pair(true, then_type.second);
 }

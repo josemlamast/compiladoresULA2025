@@ -70,6 +70,27 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 };
 
+class PairDatatype : public Datatype
+{
+public:
+    PairDatatype(Datatype* _first_type, Datatype* _second_type) noexcept;
+
+    void destroy() noexcept override;
+
+    ASTNodeInterface* copy() const noexcept override;
+
+    bool equal(ASTNodeInterface* other) const noexcept override;
+
+    bool resolve_name(SymbolTable& symbol_table) noexcept override;
+
+    Datatype* get_first_type() const noexcept;
+    Datatype* get_second_type() const noexcept;
+
+private:
+    Datatype* first_type;
+    Datatype* second_type;
+};
+
 class ArrayDatatype : public Datatype
 {
 public:

@@ -98,6 +98,7 @@ program : expr                           { parser_result = $1; }
         ;
 
 expr : TOKEN_LET TOKEN_IDENTIFIER TOKEN_ASIG expr TOKEN_IN expr { printf("PARSER: Creating LetExpression for '%s'\n", last_identifier); $$ = new LetExpression(last_identifier, $4, $6); }
+     | TOKEN_VAL TOKEN_IDENTIFIER TOKEN_ASIG expr { printf("PARSER: Creating ValExpression for '%s'\n", last_identifier); $$ = new ValExpression(last_identifier, $4); }
      | or_expr
      ;
 
@@ -151,7 +152,7 @@ primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN           { $$ = $2; }
              | literal                                 { $$ = $1; }
              | function_call                           { $$ = $1; }
              | TOKEN_IDENTIFIER                        { $$ = new NameExpression(last_identifier); }
-             | TOKEN_FUN TOKEN_IDENTIFIER TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN  expr TOKEN_END { $$ = new FunctionExpression(last_identifier, prev_identifier, $6); }
+             | TOKEN_FUN TOKEN_IDENTIFIER TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN expr TOKEN_END { printf("PARSER: Creating FunctionExpression for '%s'\n", last_identifier); $$ = new FunctionExpression(last_identifier, prev_identifier, $6); }
              ;
 
 
@@ -162,6 +163,7 @@ literal : TOKEN_INT                                   { $$ = new IntExpression(a
         | TOKEN_TRUE                                 { $$ = new BooleanExpression(true); }
         | TOKEN_FALSE                                { $$ = new BooleanExpression(false); }
         | array_literal                              { $$ = $1; }
+        | pair_literal                               { $$ = $1; }
         ;
 
 array_literal : TOKEN_LCORCH elements TOKEN_RCORCH { $$ = new ArrayExpression({$2}); }
@@ -172,6 +174,9 @@ elements : elements TOKEN_COMA expr               { /* TODO: implementar lista d
          | expr                                   { /* TODO: implementar lista de elementos */ $$ = $1; }
          ;
 
+pair_literal : TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN { $$ = new PairExpression($2, $4); }
+             ;
+
 function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN  { $$ = new PrintExpression($3); }
               | TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN    { $$ = new FstExpression($3); }
               | TOKEN_SND TOKEN_LPAREN expr TOKEN_RPAREN    { $$ = new SndExpression($3); }
@@ -179,16 +184,18 @@ function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN  { $$ = new PrintExpr
               | TOKEN_RTOS TOKEN_LPAREN expr TOKEN_RPAREN   { $$ = new RtosExpression($3); }
               | TOKEN_ETOR TOKEN_LPAREN expr TOKEN_RPAREN   { $$ = new ItorExpression($3); }
               | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   { $$ = new RtoiExpression($3); }
-              | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN  expr  TOKEN_ELSE  expr  TOKEN_END { /* TODO: implementar if */ $$ = $5; }
+              | TOKEN_PAIR TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN { $$ = new PairExpression($3, $5); }
+              | if_expression
               | TOKEN_EMPTY { /* TODO: implementar empty */ $$ = new IntExpression(0); }
               | TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN { /* TODO: implementar llamada a función */ $$ = $3; }
               | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN { $$ = new HeadExpression($3); }
               | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN { $$ = new TailExpression($3); }
-              | TOKEN_ADD_ARRAY TOKEN_LPAREN array_literal TOKEN_COMA expr  TOKEN_RPAREN { $$ = new AddArrayExpression($3, $5); }
+              | TOKEN_ADD_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr  TOKEN_RPAREN { $$ = new AddArrayExpression($3, $5); }
               | TOKEN_DEL_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr  TOKEN_RPAREN { $$ = new DelArrayExpression($3, $5); }
               ;
-                          
 
+if_expression : TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN expr TOKEN_ELSE expr TOKEN_END { printf("PARSER: Creating IfExpression\n"); $$ = new IfExpression($3, $5, $7); }
+              ;
 
 %% /* ---------- user code ---------- */
 

@@ -144,3 +144,58 @@ const ParamList& FunctionDatatype::get_parameters() const noexcept
 {
     return this->parameters;
 }
+
+// PairDatatype
+PairDatatype::PairDatatype(Datatype* _first_type, Datatype* _second_type) noexcept
+    : first_type{_first_type}, second_type{_second_type} {}
+
+void PairDatatype::destroy() noexcept
+{
+    if (this->first_type != nullptr)
+    {
+        this->first_type->destroy();
+        delete this->first_type;
+        this->first_type = nullptr;
+    }
+    if (this->second_type != nullptr)
+    {
+        this->second_type->destroy();
+        delete this->second_type;
+        this->second_type = nullptr;
+    }
+}
+
+ASTNodeInterface* PairDatatype::copy() const noexcept
+{
+    return new PairDatatype{
+        dynamic_cast<Datatype*>(this->first_type->copy()),
+        dynamic_cast<Datatype*>(this->second_type->copy())
+    };
+}
+
+bool PairDatatype::equal(ASTNodeInterface* other) const noexcept
+{
+    auto other_pair = dynamic_cast<PairDatatype*>(other);
+    if (other_pair == nullptr)
+        return false;
+    
+    return this->first_type->equal(other_pair->first_type) &&
+           this->second_type->equal(other_pair->second_type);
+}
+
+bool PairDatatype::resolve_name(SymbolTable& symbol_table) noexcept
+{
+    bool first_result = this->first_type->resolve_name(symbol_table);
+    bool second_result = this->second_type->resolve_name(symbol_table);
+    return first_result && second_result;
+}
+
+Datatype* PairDatatype::get_first_type() const noexcept
+{
+    return this->first_type;
+}
+
+Datatype* PairDatatype::get_second_type() const noexcept
+{
+    return this->second_type;
+}
