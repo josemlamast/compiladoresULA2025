@@ -235,6 +235,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    bool resolve_name(SymbolTable& symbol_table) noexcept override;
 };
 
 class CallExpression : public BinaryExpression
@@ -247,6 +249,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    bool resolve_name(SymbolTable& symbol_table) noexcept override;
 };
 
 class SubscriptExpression : public BinaryExpression

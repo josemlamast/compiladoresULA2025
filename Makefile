@@ -10,6 +10,7 @@ all: main
 
 main: $(OBJ) main.cpp
 	$(CXX) -I. $@.cpp -o $@ $(OBJ)
+
 	
 parser.o: parser.c
 	$(CXX) -c -I. -std=c++17 parser.c

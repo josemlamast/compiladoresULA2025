@@ -518,6 +518,22 @@ std::pair<bool, Datatype*> ArgExpression::type_check() const noexcept
     return this->left_expression->type_check();
 }
 
+bool ArgExpression::resolve_name(SymbolTable& symbol_table) noexcept
+{
+    // Resolver el argumento izquierdo
+    bool left_result = this->left_expression->resolve_name(symbol_table);
+    if (!left_result) {
+        return false;
+    }
+    
+    // Resolver el argumento derecho si existe
+    if (this->right_expression != nullptr) {
+        return this->right_expression->resolve_name(symbol_table);
+    }
+    
+    return true;
+}
+
 ASTNodeInterface* CallExpression::copy() const noexcept
 {
     Expression* left_copy = dynamic_cast<Expression*>(this->left_expression->copy());
@@ -602,6 +618,22 @@ std::pair<bool, Datatype*> CallExpression::type_check() const noexcept
     }
 
     return std::make_pair(true, result);    
+}
+
+bool CallExpression::resolve_name(SymbolTable& symbol_table) noexcept
+{
+    // Resolver el nombre de la función
+    bool left_result = this->left_expression->resolve_name(symbol_table);
+    if (!left_result) {
+        return false;
+    }
+    
+    // Resolver los argumentos si existen
+    if (this->right_expression != nullptr) {
+        return this->right_expression->resolve_name(symbol_table);
+    }
+    
+    return true;
 }
 
 ASTNodeInterface* SubscriptExpression::copy() const noexcept
