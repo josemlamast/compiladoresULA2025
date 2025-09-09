@@ -166,14 +166,3 @@ bool PrintStatement::equal(ASTNodeInterface* other) const noexcept
     auto other_stmt = dynamic_cast<PrintStatement*>(other);
     return other_stmt != nullptr && ExpressionStatement::equal(other);
 }
-
-ASTNodeInterface* ReturnStatement::copy() const noexcept
-{
-    return new ReturnStatement{dynamic_cast<Expression*>(this->expression->copy())};
-}
-
-bool ReturnStatement::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_stmt = dynamic_cast<ReturnStatement*>(other);
-    return other_stmt != nullptr && ExpressionStatement::equal(other);
-}

@@ -62,6 +62,16 @@ bool StringDatatype::equal(ASTNodeInterface* other) const noexcept
     return dynamic_cast<StringDatatype*>(other) != nullptr;
 }
 
+ASTNodeInterface* RealDatatype::copy() const noexcept 
+{
+    return new RealDatatype{};
+}
+
+bool RealDatatype::equal(ASTNodeInterface* other) const noexcept
+{
+    return dynamic_cast<RealDatatype*>(other) != nullptr;
+}
+
 ArrayDatatype::ArrayDatatype(Datatype* _inner_datatype) noexcept
     : inner_datatype{_inner_datatype} {}
 

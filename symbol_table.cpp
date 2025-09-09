@@ -21,6 +21,7 @@ SymbolTable::~SymbolTable() noexcept
 void SymbolTable::enter_scope() noexcept
 {
     this->scopes.push_back(TableType{});
+    printf("DEBUG: Entered scope, now at level %zu\n", this->scopes.size());
 }
 
 bool SymbolTable::exit_scope() noexcept
@@ -30,6 +31,7 @@ bool SymbolTable::exit_scope() noexcept
         return false;
     }
 
+    printf("DEBUG: Exiting scope, was at level %zu\n", this->scopes.size());
     this->scopes.pop_back();
     return true;
 }
@@ -54,22 +56,26 @@ bool SymbolTable::bind(const std::string& name, std::shared_ptr<Symbol> symbol) 
     }
 
     current_scope.emplace(name, symbol);
+    printf("DEBUG: Bound '%s' at scope level %zu\n", name.c_str(), this->scopes.size());
 
     return true;
 }
 
 std::shared_ptr<Symbol> SymbolTable::lookup(const std::string& name) noexcept
 {
+    printf("DEBUG: Looking up '%s' in %zu scopes\n", name.c_str(), this->scopes.size());
     for (auto it = this->scopes.rbegin(); it != this->scopes.rend(); ++it)
     {
         auto found = SymbolTable::find_in_scope(name, *it);
 
         if (found != nullptr)
         {
+            printf("DEBUG: Found '%s' in scope\n", name.c_str());
             return found;
         }
     }
 
+    printf("DEBUG: '%s' not found in any scope\n", name.c_str());
     return nullptr;
 }
 
