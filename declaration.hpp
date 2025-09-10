@@ -32,6 +32,8 @@ public:
     
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
 
+    std::string evaluate() const noexcept override;
+
 private:
     Expression* expression;
 };
@@ -50,6 +52,8 @@ public:
     std::pair<bool, Datatype*> type_check() const noexcept override;
 
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
+
+    std::string evaluate() const noexcept override;
 
 private:
     Body body;

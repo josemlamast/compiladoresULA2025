@@ -8,6 +8,9 @@ default: main
 
 all: main
 
+demo_interpreter: ast_node_interface.o datatype.o expression.o symbol_table.o demo_interpreter.cpp
+	$(CXX) -I. demo_interpreter.cpp -o demo_interpreter ast_node_interface.o datatype.o expression.o symbol_table.o
+
 main: $(OBJ) main.cpp
 	$(CXX) -I. $@.cpp -o $@ $(OBJ)
 

@@ -17,6 +17,11 @@ ASTNodeInterface* VoidDatatype::copy() const noexcept
     return new VoidDatatype{};
 }
 
+std::string VoidDatatype::evaluate() const noexcept
+{
+    return "void";
+}
+
 bool VoidDatatype::equal(ASTNodeInterface* other) const noexcept
 {
     return dynamic_cast<VoidDatatype*>(other) != nullptr;
@@ -25,6 +30,11 @@ bool VoidDatatype::equal(ASTNodeInterface* other) const noexcept
 ASTNodeInterface* BooleanDatatype::copy() const noexcept 
 {
     return new BooleanDatatype{};
+}
+
+std::string BooleanDatatype::evaluate() const noexcept
+{
+    return "boolean";
 }
 
 bool BooleanDatatype::equal(ASTNodeInterface* other) const noexcept
@@ -37,6 +47,11 @@ ASTNodeInterface* CharacterDatatype::copy() const noexcept
     return new CharacterDatatype{};
 }
 
+std::string CharacterDatatype::evaluate() const noexcept
+{
+    return "character";
+}
+
 bool CharacterDatatype::equal(ASTNodeInterface* other) const noexcept
 {
     return dynamic_cast<CharacterDatatype*>(other) != nullptr;
@@ -45,6 +60,11 @@ bool CharacterDatatype::equal(ASTNodeInterface* other) const noexcept
 ASTNodeInterface* IntegerDatatype::copy() const noexcept 
 {
     return new IntegerDatatype{};
+}
+
+std::string IntegerDatatype::evaluate() const noexcept
+{
+    return "integer";
 }
 
 bool IntegerDatatype::equal(ASTNodeInterface* other) const noexcept
@@ -57,6 +77,11 @@ ASTNodeInterface* StringDatatype::copy() const noexcept
     return new StringDatatype{};
 }
 
+std::string StringDatatype::evaluate() const noexcept
+{
+    return "string";
+}
+
 bool StringDatatype::equal(ASTNodeInterface* other) const noexcept
 {
     return dynamic_cast<StringDatatype*>(other) != nullptr;
@@ -65,6 +90,11 @@ bool StringDatatype::equal(ASTNodeInterface* other) const noexcept
 ASTNodeInterface* RealDatatype::copy() const noexcept 
 {
     return new RealDatatype{};
+}
+
+std::string RealDatatype::evaluate() const noexcept
+{
+    return "real";
 }
 
 bool RealDatatype::equal(ASTNodeInterface* other) const noexcept
@@ -85,6 +115,11 @@ void ArrayDatatype::destroy() noexcept
 ASTNodeInterface* ArrayDatatype::copy() const noexcept 
 {
     return new ArrayDatatype{dynamic_cast<Datatype*>(this->inner_datatype->copy())};
+}
+
+std::string ArrayDatatype::evaluate() const noexcept
+{
+    return "array";
 }
 
 bool ArrayDatatype::equal(ASTNodeInterface* other) const noexcept
@@ -120,6 +155,11 @@ ASTNodeInterface* FunctionDatatype::copy() const noexcept
         dynamic_cast<Datatype*>(this->return_type->copy()),
         copy_param_list(this->parameters)
     };
+}
+
+std::string FunctionDatatype::evaluate() const noexcept
+{
+    return "function";
 }
 
 bool FunctionDatatype::equal(ASTNodeInterface* other) const noexcept
@@ -165,12 +205,17 @@ void PairDatatype::destroy() noexcept
     }
 }
 
-ASTNodeInterface* PairDatatype::copy() const noexcept
+ASTNodeInterface* PairDatatype::copy() const noexcept 
 {
     return new PairDatatype{
         dynamic_cast<Datatype*>(this->first_type->copy()),
         dynamic_cast<Datatype*>(this->second_type->copy())
     };
+}
+
+std::string PairDatatype::evaluate() const noexcept
+{
+    return "pair";
 }
 
 bool PairDatatype::equal(ASTNodeInterface* other) const noexcept

@@ -8,6 +8,9 @@ class SymbolTable;
 
 class Expression : public ASTNodeInterface
 {
+public:
+    virtual std::string evaluate() const noexcept = 0;
+
 protected:
     std::shared_ptr<Symbol> symbol{nullptr};
 };
@@ -39,6 +42,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 
@@ -91,6 +96,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class LessExpression : public BinaryExpression
@@ -103,6 +110,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class LessEqExpression : public BinaryExpression
@@ -115,6 +124,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class GreaterExpression : public BinaryExpression
@@ -127,6 +138,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class GreaterEqExpression : public BinaryExpression
@@ -139,6 +152,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class EqualExpression : public BinaryExpression
@@ -151,6 +166,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class NotEqualExpression : public BinaryExpression
@@ -163,6 +180,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class AddExpression : public BinaryExpression
@@ -187,6 +206,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class MulExpression : public BinaryExpression
@@ -211,6 +232,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class ModExpression : public BinaryExpression
@@ -223,6 +246,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class ArgExpression : public BinaryExpression
@@ -237,6 +262,8 @@ public:
     std::pair<bool, Datatype*> type_check() const noexcept override;
 
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class CallExpression : public BinaryExpression
@@ -251,6 +278,8 @@ public:
     std::pair<bool, Datatype*> type_check() const noexcept override;
 
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class SubscriptExpression : public BinaryExpression
@@ -263,6 +292,7 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string evaluate() const noexcept override;
 };
 
 
@@ -290,6 +320,7 @@ public:
 private:
     std::string name;
     std::shared_ptr<Symbol> symbol;
+    std::string evaluate() const noexcept override;
 };
 
 class IntExpression : public LeafExpression
@@ -305,6 +336,7 @@ public:
 
 private:
     int value;
+    std::string evaluate() const noexcept override;
 };
 
 class StrExpression : public LeafExpression
@@ -320,6 +352,7 @@ public:
 
 private:
     std::string value;
+    std::string evaluate() const noexcept override;
 };
 
 class RealExpression : public LeafExpression
@@ -335,6 +368,7 @@ public:
 
 private:
     double value;
+    std::string evaluate() const noexcept override;
 };
 
 class BooleanExpression : public LeafExpression
@@ -350,6 +384,7 @@ public:
 
 private:
     bool value;
+    std::string evaluate() const noexcept override;
 };
 
 class ArrayExpression : public Expression
@@ -369,6 +404,7 @@ public:
 
 private:
     std::vector<Expression*> elements;
+    std::string evaluate() const noexcept override;
 };
 
 class PairExpression : public Expression
@@ -413,6 +449,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class HeadExpression : public UnaryExpression
@@ -437,6 +475,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class AddArrayExpression : public BinaryExpression
@@ -449,6 +489,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class DelArrayExpression : public BinaryExpression
@@ -461,6 +503,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class FstExpression : public UnaryExpression
@@ -497,6 +541,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class ItosExpression : public UnaryExpression
@@ -533,6 +579,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class RtoiExpression : public UnaryExpression
@@ -545,6 +593,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class LetExpression : public Expression
@@ -616,4 +666,6 @@ private:
     std::string name;
     std::string param;
     Expression* body;
+
+    std::string evaluate() const noexcept override;
 };

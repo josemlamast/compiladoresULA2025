@@ -52,4 +52,6 @@ public:
     virtual std::pair<bool, Datatype*> type_check() const noexcept = 0;
 
     virtual bool resolve_name(SymbolTable& symbol_table) noexcept = 0;
+
+    virtual std::string evaluate() const noexcept = 0;
 };

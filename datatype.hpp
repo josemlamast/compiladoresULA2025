@@ -28,6 +28,8 @@ public:
     ASTNodeInterface* copy() const noexcept override;
 
     bool equal(ASTNodeInterface* other) const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class BooleanDatatype : public BasicDatatype
@@ -36,6 +38,8 @@ public:
     ASTNodeInterface* copy() const noexcept override;
 
     bool equal(ASTNodeInterface* other) const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class CharacterDatatype : public BasicDatatype
@@ -44,6 +48,8 @@ public:
     ASTNodeInterface* copy() const noexcept override;
 
     bool equal(ASTNodeInterface* other) const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class IntegerDatatype : public BasicDatatype
@@ -52,6 +58,8 @@ public:
     ASTNodeInterface* copy() const noexcept override;
 
     bool equal(ASTNodeInterface* other) const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class StringDatatype : public BasicDatatype
@@ -60,6 +68,8 @@ public:
     ASTNodeInterface* copy() const noexcept override;
 
     bool equal(ASTNodeInterface* other) const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class RealDatatype : public BasicDatatype
@@ -68,6 +78,8 @@ public:
     ASTNodeInterface* copy() const noexcept override;
 
     bool equal(ASTNodeInterface* other) const noexcept override;
+
+    std::string evaluate() const noexcept override;
 };
 
 class PairDatatype : public Datatype
@@ -82,6 +94,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
+
+    std::string evaluate() const noexcept override;
 
     Datatype* get_first_type() const noexcept;
     Datatype* get_second_type() const noexcept;
@@ -104,6 +118,8 @@ public:
 
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
 
+    std::string evaluate() const noexcept override;
+
     Datatype* get_inner_datatype() const noexcept;
 private:
     Datatype* inner_datatype;
@@ -121,6 +137,8 @@ public:
     bool equal(ASTNodeInterface* other) const noexcept override;
 
     bool resolve_name(SymbolTable& symbol_table) noexcept override;
+
+    std::string evaluate() const noexcept override;
     
     Datatype* get_return_type() const noexcept;
 

@@ -266,6 +266,26 @@ std::pair<bool, Datatype*> AndExpression::type_check() const noexcept
     return this->boolean_operation_type_check();
 }
 
+std::string AndExpression::evaluate() const noexcept
+{
+    bool left = this->left_expression->evaluate() == "true";
+    bool right = this->right_expression->evaluate() == "true";
+    return (left && right) ? "true" : "false";
+}
+
+std::string OrExpression::evaluate() const noexcept
+{
+    bool left = this->left_expression->evaluate() == "true";
+    bool right = this->right_expression->evaluate() == "true";
+    return (left || right) ? "true" : "false";
+}
+
+std::string NotExpression::evaluate() const noexcept
+{
+    bool value = this->expression->evaluate() == "true";
+    return (!value) ? "true" : "false";
+}
+
 ASTNodeInterface* OrExpression::copy() const noexcept
 {
     return new OrExpression{
@@ -418,6 +438,13 @@ std::pair<bool, Datatype*> AddExpression::type_check() const noexcept
     return this->arithmetic_operation_type_check();    
 }
 
+std::string AddExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return std::to_string(left + right);
+}
+
 ASTNodeInterface* SubExpression::copy() const noexcept
 {
     return new SubExpression{
@@ -454,6 +481,36 @@ bool MulExpression::equal(ASTNodeInterface* other) const noexcept
 std::pair<bool, Datatype*> MulExpression::type_check() const noexcept
 {
     return this->arithmetic_operation_type_check();    
+}
+
+std::string MulExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return std::to_string(left * right);
+}
+
+std::string SubExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return std::to_string(left - right);
+}
+
+std::string DivExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    if (right == 0) return "ERROR: division by zero";
+    return std::to_string(left / right);
+}
+
+std::string ModExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    if (right == 0) return "ERROR: modulo by zero";
+    return std::to_string(left % right);
 }
 
 ASTNodeInterface* DivExpression::copy() const noexcept
@@ -722,6 +779,13 @@ std::pair<bool, Datatype*> NameExpression::type_check() const noexcept
     return std::make_pair(true, dynamic_cast<Datatype*>(this->symbol->type->copy()));    
 }
 
+std::string NameExpression::evaluate() const noexcept
+{
+    // Para simplificar, retornamos el nombre de la variable
+    // En una implementación real, necesitarías acceder al valor almacenado
+    return "VARIABLE_" + this->name;
+}
+
 IntExpression::IntExpression(int _value) noexcept
     : value{_value} {}
 
@@ -739,6 +803,11 @@ bool IntExpression::equal(ASTNodeInterface* other) const noexcept
 std::pair<bool, Datatype*> IntExpression::type_check() const noexcept
 {
     return std::make_pair(true, new IntegerDatatype{});
+}
+
+std::string IntExpression::evaluate() const noexcept
+{
+    return std::to_string(this->value);
 }
 
 StrExpression::StrExpression(std::string_view _value) noexcept
@@ -760,6 +829,11 @@ std::pair<bool, Datatype*> StrExpression::type_check() const noexcept
     return std::make_pair(true, new StringDatatype{});    
 }
 
+std::string StrExpression::evaluate() const noexcept
+{
+    return this->value;
+}
+
 RealExpression::RealExpression(double _value) noexcept
     : value{_value} {}
 
@@ -779,6 +853,11 @@ std::pair<bool, Datatype*> RealExpression::type_check() const noexcept
     return std::make_pair(true, new RealDatatype{});
 }
 
+std::string RealExpression::evaluate() const noexcept
+{
+    return std::to_string(this->value);
+}
+
 BooleanExpression::BooleanExpression(bool _value) noexcept
     : value{_value} {}
 
@@ -796,6 +875,11 @@ bool BooleanExpression::equal(ASTNodeInterface* other) const noexcept
 std::pair<bool, Datatype*> BooleanExpression::type_check() const noexcept
 {
     return std::make_pair(true, new BooleanDatatype{});
+}
+
+std::string BooleanExpression::evaluate() const noexcept
+{
+    return this->value ? "true" : "false";
 }
 
 ArrayExpression::ArrayExpression(const std::vector<Expression*>& _elements) noexcept
@@ -885,6 +969,18 @@ std::pair<bool, Datatype*> ArrayExpression::type_check() const noexcept
     return std::make_pair(true, new ArrayDatatype{first_type.second});
 }
 
+std::string ArrayExpression::evaluate() const noexcept
+{
+    std::string result = "[";
+    for (size_t i = 0; i < this->elements.size(); ++i)
+    {
+        if (i > 0) result += ", ";
+        result += this->elements[i]->evaluate();
+    }
+    result += "]";
+    return result;
+}
+
 PairExpression::PairExpression(Expression* _first, Expression* _second) noexcept
     : first{_first}, second{_second} {}
 
@@ -945,6 +1041,11 @@ std::pair<bool, Datatype*> PairExpression::type_check() const noexcept
     return std::make_pair(true, new PairDatatype{first_type.second, second_type.second});
 }
 
+std::string PairExpression::evaluate() const noexcept
+{
+    return "(" + this->first->evaluate() + ", " + this->second->evaluate() + ")";
+}
+
 // ConcatExpression
 ASTNodeInterface* ConcatExpression::copy() const noexcept
 {
@@ -980,6 +1081,60 @@ std::pair<bool, Datatype*> ConcatExpression::type_check() const noexcept
     }
     
     return std::make_pair(true, new StringDatatype{});
+}
+
+std::string ConcatExpression::evaluate() const noexcept
+{
+    return this->left_expression->evaluate() + this->right_expression->evaluate();
+}
+
+std::string LessExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return (left < right) ? "true" : "false";
+}
+
+std::string EqualExpression::evaluate() const noexcept
+{
+    std::string left = this->left_expression->evaluate();
+    std::string right = this->right_expression->evaluate();
+    return (left == right) ? "true" : "false";
+}
+
+std::string LessEqExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return (left <= right) ? "true" : "false";
+}
+
+std::string GreaterExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return (left > right) ? "true" : "false";
+}
+
+std::string GreaterEqExpression::evaluate() const noexcept
+{
+    int left = std::stoi(this->left_expression->evaluate());
+    int right = std::stoi(this->right_expression->evaluate());
+    return (left >= right) ? "true" : "false";
+}
+
+std::string NotEqualExpression::evaluate() const noexcept
+{
+    std::string left = this->left_expression->evaluate();
+    std::string right = this->right_expression->evaluate();
+    return (left != right) ? "true" : "false";
+}
+
+std::string XorExpression::evaluate() const noexcept
+{
+    bool left = this->left_expression->evaluate() == "true";
+    bool right = this->right_expression->evaluate() == "true";
+    return (left != right) ? "true" : "false";
 }
 
 // XorExpression
@@ -1034,6 +1189,23 @@ std::pair<bool, Datatype*> HeadExpression::type_check() const noexcept
     delete expr_type.second;
     
     return std::make_pair(true, result);
+}
+
+std::string HeadExpression::evaluate() const noexcept
+{
+    std::string array_str = this->expression->evaluate();
+    // Para simplificar, asumimos que el array tiene al menos un elemento
+    // En una implementación real, necesitarías parsear el array
+    if (array_str == "[]") {
+        return "ERROR: head of empty array";
+    }
+    // Extraer el primer elemento (simplificado)
+    size_t start = array_str.find('[') + 1;
+    size_t end = array_str.find(',', start);
+    if (end == std::string::npos) {
+        end = array_str.find(']', start);
+    }
+    return array_str.substr(start, end - start);
 }
 
 // TailExpression
@@ -1199,6 +1371,18 @@ std::pair<bool, Datatype*> FstExpression::type_check() const noexcept
     return std::make_pair(true, first_type);
 }
 
+std::string FstExpression::evaluate() const noexcept
+{
+    std::string pair_str = this->expression->evaluate();
+    // Extraer el primer elemento del par (simplificado)
+    size_t start = pair_str.find('(') + 1;
+    size_t end = pair_str.find(',', start);
+    if (end == std::string::npos) {
+        return "ERROR: invalid pair";
+    }
+    return pair_str.substr(start, end - start);
+}
+
 // SndExpression
 ASTNodeInterface* SndExpression::copy() const noexcept
 {
@@ -1235,6 +1419,36 @@ std::pair<bool, Datatype*> SndExpression::type_check() const noexcept
     delete expr_type.second;
     
     return std::make_pair(true, second_type);
+}
+
+std::string SndExpression::evaluate() const noexcept
+{
+    std::string pair_str = this->expression->evaluate();
+    // Extraer el segundo elemento del par (simplificado)
+    size_t start = pair_str.find(',') + 1;
+    size_t end = pair_str.find(')', start);
+    if (end == std::string::npos) {
+        return "ERROR: invalid pair";
+    }
+    return pair_str.substr(start, end - start);
+}
+
+std::string TailExpression::evaluate() const noexcept
+{
+    std::string array_str = this->expression->evaluate();
+    // Para simplificar, retornamos el array sin el primer elemento
+    if (array_str == "[]") {
+        return "[]";
+    }
+    // En una implementación real, necesitarías parsear y reconstruir el array
+    return "TAIL_" + array_str;
+}
+
+std::string PrintExpression::evaluate() const noexcept
+{
+    std::string result = this->expression->evaluate();
+    printf("PRINT: %s\n", result.c_str());
+    return result;
 }
 
 // PrintExpression
@@ -1294,6 +1508,11 @@ std::pair<bool, Datatype*> ItosExpression::type_check() const noexcept
     return std::make_pair(true, new StringDatatype{});
 }
 
+std::string ItosExpression::evaluate() const noexcept
+{
+    return this->expression->evaluate();
+}
+
 // RtosExpression
 ASTNodeInterface* RtosExpression::copy() const noexcept
 {
@@ -1323,6 +1542,37 @@ std::pair<bool, Datatype*> RtosExpression::type_check() const noexcept
     delete expr_type.second;
     
     return std::make_pair(true, new StringDatatype{});
+}
+
+std::string RtosExpression::evaluate() const noexcept
+{
+    return this->expression->evaluate();
+}
+
+std::string ItorExpression::evaluate() const noexcept
+{
+    return this->expression->evaluate();
+}
+
+std::string RtoiExpression::evaluate() const noexcept
+{
+    return this->expression->evaluate();
+}
+
+std::string AddArrayExpression::evaluate() const noexcept
+{
+    std::string array_str = this->left_expression->evaluate();
+    std::string element_str = this->right_expression->evaluate();
+    // Para simplificar, retornamos una representación del array con el elemento agregado
+    return "ADD_ARRAY(" + array_str + ", " + element_str + ")";
+}
+
+std::string DelArrayExpression::evaluate() const noexcept
+{
+    std::string array_str = this->left_expression->evaluate();
+    std::string index_str = this->right_expression->evaluate();
+    // Para simplificar, retornamos una representación del array con el elemento eliminado
+    return "DEL_ARRAY(" + array_str + ", " + index_str + ")";
 }
 
 // ItorExpression
@@ -1501,6 +1751,13 @@ std::pair<bool, Datatype*> LetExpression::type_check() const noexcept
     return body_type;
 }
 
+std::string LetExpression::evaluate() const noexcept
+{
+    // Evaluar el valor y luego el cuerpo
+    std::string value_result = this->value->evaluate();
+    return this->body->evaluate();
+}
+
 // FunctionExpression
 FunctionExpression::FunctionExpression(const std::string& _name, const std::string& _param, Expression* _body) noexcept
     : name(_name), param(_param), body(_body)
@@ -1662,6 +1919,11 @@ std::pair<bool, Datatype*> ValExpression::type_check() const noexcept
     return this->value->type_check();
 }
 
+std::string ValExpression::evaluate() const noexcept
+{
+    return this->value->evaluate();
+}
+
 // IfExpression
 IfExpression::IfExpression(Expression* _condition, Expression* _then_expr, Expression* _else_expr) noexcept
     : condition{_condition}, then_expr{_then_expr}, else_expr{_else_expr} {}
@@ -1784,4 +2046,41 @@ std::pair<bool, Datatype*> IfExpression::type_check() const noexcept
     delete else_type.second;
     
     return std::make_pair(true, then_type.second);
+}
+
+std::string IfExpression::evaluate() const noexcept
+{
+    std::string condition_result = this->condition->evaluate();
+    if (condition_result == "true") {
+        return this->then_expr->evaluate();
+    } else {
+        return this->else_expr->evaluate();
+    }
+}
+
+std::string FunctionExpression::evaluate() const noexcept
+{
+    return "FUNCTION_" + this->name;
+}
+
+std::string CallExpression::evaluate() const noexcept
+{
+    std::string left_result = this->left_expression->evaluate();
+    std::string right_result = this->right_expression->evaluate();
+    return "CALL(" + left_result + ", " + right_result + ")";
+}
+
+std::string ArgExpression::evaluate() const noexcept
+{
+    std::string left_result = this->left_expression->evaluate();
+    std::string right_result = this->right_expression->evaluate();
+    return "ARG(" + left_result + ", " + right_result + ")";
+}
+
+std::string SubscriptExpression::evaluate() const noexcept
+{
+    std::string array_str = this->left_expression->evaluate();
+    std::string index_str = this->right_expression->evaluate();
+    // Para simplificar, retornamos una representación del elemento en el índice
+    return "SUBSCRIPT(" + array_str + ", " + index_str + ")";
 }

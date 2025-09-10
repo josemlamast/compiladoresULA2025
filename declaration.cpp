@@ -74,6 +74,14 @@ bool VariableDeclaration::resolve_name(SymbolTable& symbol_table) noexcept
     return result;
 }
 
+std::string VariableDeclaration::evaluate() const noexcept
+{
+    if (this->expression != nullptr) {
+        return this->expression->evaluate();
+    }
+    return "VARIABLE_" + this->name;
+}
+
 FunctionDeclaration::FunctionDeclaration(std::string_view fct_name, Datatype* datatype, const Body& fct_body) noexcept
     : Declaration{fct_name, datatype}, body{fct_body} {}
 
@@ -116,6 +124,11 @@ bool FunctionDeclaration::resolve_name(SymbolTable& symbol_table) noexcept
     }
 
     return result && body_result;
+}
+
+std::string FunctionDeclaration::evaluate() const noexcept
+{
+    return "FUNCTION_" + this->name;
 }
 
 std::pair<bool, Datatype*> FunctionDeclaration::type_check() const noexcept
