@@ -1,3 +1,0 @@
-fun sum (x) if (x == 10) 5 else 3 end end
-
-
