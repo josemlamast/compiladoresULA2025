@@ -7,6 +7,7 @@
 
 char* last_identifier = nullptr;
 char* prev_identifier = nullptr;
+char* function_name = nullptr;
 
 int let_context = 0;
 char* let_var_stack[100];
@@ -20,8 +21,8 @@ INT     ({DIGIT}+)
 REAL ({DIGIT}+([.]{DIGIT}+))
 IDENTIFIER ({LETTER})({DIGIT}|{LETTER}|_)*
 TEXT       (\"({DIGIT}|{LETTER}|{SPACE}|[+\-*/])*\")
-COMMENTL (@@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*)
-COMMENTML   (\@({DIGIT}|{LETTER}|{TEXT}|{SPACE})*\@)
+COMMENTL (@@[^@]*)
+COMMENTML   @[^@]*@
 COMMENT ({COMMENTL}|{COMMENTML})
 NARRAY (<{DIGIT}+>)
 %%
@@ -73,7 +74,7 @@ NARRAY (<{DIGIT}+>)
 {NARRAY} { return TOKEN_NARRAY; }
 
 
-{COMMENT} { /*ignorar*/ }
+{COMMENT} {/*ignorar*/}
 
 {IDENTIFIER} {
      if (let_context == 1) {
@@ -103,6 +104,10 @@ void cleanup_lexer(){
     if(last_identifier){
         free(last_identifier);
         last_identifier = nullptr;
+    }
+    if(function_name){
+        free(function_name);
+        function_name = nullptr;
     }
 }
 

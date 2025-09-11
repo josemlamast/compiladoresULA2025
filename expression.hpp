@@ -1,104 +1,31 @@
+
 #pragma once
 
-#include <memory>
+#include "utils.hpp"
 
-#include <ast_node_interface.hpp>
-
-class SymbolTable;
-
-class Expression : public ASTNodeInterface
-{
-protected:
-    std::shared_ptr<Symbol> symbol{nullptr};
-};
-
-class UnaryExpression : public Expression
-{
-public:
-    UnaryExpression(Expression* expr) noexcept;
-
-    void destroy() noexcept override;
-
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    bool resolve_name(SymbolTable& symbol_table) noexcept override;
-
-    Expression* get_expression() const noexcept;
-
-protected:
-    Expression* expression;
-};
 
 
 
 class NotExpression : public UnaryExpression
 {
 public:
-    using UnaryExpression::UnaryExpression;
+     using UnaryExpression::UnaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
-//////////////////////////////////////////////////////////
-class IncrementExpression : public UnaryExpression
-{
-public:
-    using UnaryExpression::UnaryExpression;
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-};
-
-class DecrementExpression : public UnaryExpression
-{
-public:
-    using UnaryExpression::UnaryExpression;
-
-    ASTNodeInterface* copy() const noexcept override;
-
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-};
-//////////////////////////////////////////////////////////
 
 
-class BinaryExpression : public Expression
-{
-public:
-    BinaryExpression(Expression* left_expr, Expression* right_expr) noexcept;
-
-    void destroy() noexcept override;
-
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    bool resolve_name(SymbolTable& symbol_table) noexcept override;
-    
-    std::pair<bool, Datatype*> boolean_operation_type_check() const noexcept;
-
-    std::pair<bool, Datatype*> comparison_type_check() const noexcept;
-
-    std::pair<bool, Datatype*> arithmetic_operation_type_check() const noexcept;
-
-    Expression* get_left_expression() const noexcept;
-
-    Expression* get_right_expression() const noexcept;
-
-protected:
-    Expression* left_expression;
-    Expression* right_expression;
-};
 
 class ConcatExpression : public BinaryExpression {
 public:
-    using BinaryExpression::BinaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class AndExpression : public BinaryExpression
@@ -106,30 +33,27 @@ class AndExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class XorExpression : public BinaryExpression {
 public:
-    using BinaryExpression::BinaryExpression;
-    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+   using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class OrExpression : public BinaryExpression {
 public:
-     OrExpression(Expression* left, Expression* right) noexcept 
-        : BinaryExpression(left, right) {}
-    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 
@@ -138,11 +62,9 @@ class LessExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class LessEqExpression : public BinaryExpression
@@ -150,11 +72,9 @@ class LessEqExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class GreaterExpression : public BinaryExpression
@@ -162,11 +82,9 @@ class GreaterExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class GreaterEqExpression : public BinaryExpression
@@ -174,11 +92,9 @@ class GreaterEqExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class EqualExpression : public BinaryExpression
@@ -186,23 +102,19 @@ class EqualExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class NotEqualExpression : public BinaryExpression
 {
 public:
-    using BinaryExpression::BinaryExpression;
+   using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 
@@ -211,11 +123,9 @@ class AddExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class SubExpression : public BinaryExpression
@@ -223,11 +133,9 @@ class SubExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class MulExpression : public BinaryExpression
@@ -235,286 +143,311 @@ class MulExpression : public BinaryExpression
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class DivExpression : public BinaryExpression
 {
 public:
-    using BinaryExpression::BinaryExpression;
+   using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 class ModExpression : public BinaryExpression
 {
 public:
-    using BinaryExpression::BinaryExpression;
+  using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
 
 
-///////////////////////////////////////////////////
-
-class ArgExpression : public BinaryExpression
-{
-public:
-    using BinaryExpression::BinaryExpression;
-
-    ASTNodeInterface* copy() const noexcept override;
-
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-};
-
-///////////////////////////////////////////////////////
 
 class CallExpression : public BinaryExpression
 {
 public:
     using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
-
-
-///////////////////////////////////////////////////////
-
-class SubscriptExpression : public BinaryExpression
-{
-public:
-    using BinaryExpression::BinaryExpression;
-
-    ASTNodeInterface* copy() const noexcept override;
-
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-};
 
 
 class AssignmentExpression : public BinaryExpression
 {
 public:
-    using BinaryExpression::BinaryExpression;
+   using BinaryExpression::BinaryExpression;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
-
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 };
 
-///////////////////////////////////////////////////////
-
-class LeafExpression : public Expression
+class FunExpression  : public UnaryExpression
 {
 public:
-    void destroy() noexcept override;
+    FunExpression(std::shared_ptr<Expression> _function_name_expression, std::shared_ptr<Expression> _parameter_name_expression, std::shared_ptr<Expression> _body_expression) noexcept;
 
-    bool resolve_name(SymbolTable& symbol_table) noexcept override;
+    std::shared_ptr<Expression> get_function_name_expression() const noexcept;
+
+    std::shared_ptr<Expression> get_parameter_name_expression() const noexcept;
+
+    const std::string& get_name() const noexcept;
+
+    const std::string& get_parameter_name() const noexcept;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
+
+    std::shared_ptr<Expression> get_body_expression() const noexcept;
+
+private:
+    std::shared_ptr<Expression> function_name_expression;
+    std::shared_ptr<Expression> parameter_name_expression;
 };
 
-class NameExpression : public LeafExpression
+class LetExpression : public Expression
 {
 public:
-    NameExpression(std::string_view _name) noexcept;
+    LetExpression(std::shared_ptr<Expression> _var_name, std::shared_ptr<Expression> _var_expression, std::shared_ptr<Expression> _body_expression) noexcept;
 
-    ASTNodeInterface* copy() const noexcept override;
+    std::shared_ptr<Expression> get_var_name() const noexcept;
+    std::shared_ptr<Expression> get_var_expression() const noexcept;
+    std::shared_ptr<Expression> get_body_expression() const noexcept;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
+    std::shared_ptr<Expression> eval(Environment& env) const override;
 
-    bool resolve_name(SymbolTable& symbol_table) noexcept override;
+    std::string to_string() const noexcept override;
 
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+private:
+    std::shared_ptr<Expression> var_name;
+    std::shared_ptr<Expression> var_expression;
+    std::shared_ptr<Expression> body_expression;
+};
+
+class NameExpression : public Expression
+{
+public:
+    NameExpression(const std::string& _name) noexcept;
+
+    const std::string& get_name() const noexcept;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 
 private:
     std::string name;
 };
 
-class RealExpression : public LeafExpression {
+class RealExpression : public Expression{
 public:
-    RealExpression(double value) noexcept;
-    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+     RealExpression(double _value) noexcept;
+
+    double get_value() const noexcept;
+
+    std::shared_ptr<Expression> eval(Environment&) const override;
+
+    std::string to_string() const noexcept override;
     
     
 private:
     double value;
 };
 
-class IntExpression : public LeafExpression
+class IntExpression : public Expression
 {
 public:
     IntExpression(int _value) noexcept;
 
-    ASTNodeInterface* copy() const noexcept override;
+    int get_value() const noexcept;
 
-    bool equal(ASTNodeInterface* other) const noexcept override;
+    std::shared_ptr<Expression> eval(Environment&) const override;
 
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    std::string to_string() const noexcept override;
 
 private:
     int value;
 };
 
-class BoolExpression : public LeafExpression {
+class BoolExpression : public Expression {
 public:
-    BoolExpression(bool value) noexcept;
-    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+     BoolExpression(bool _value) noexcept;
+
+    bool get_value() const noexcept;
+
+    std::shared_ptr<Expression> eval(Environment&) const override;
+
+    std::string to_string() const noexcept override;
 
     
 private:
     bool value;
 };
 
-class StrExpression : public LeafExpression
+class StrExpression : public Expression
 {
 public:
-    StrExpression(std::string_view _value) noexcept;
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+     StrExpression(const std::string& _value) noexcept;
+
+    const std::string& get_value() const noexcept;
+
+    std::shared_ptr<Expression> eval(Environment&) const override;
+
+    std::string to_string() const noexcept override;
 
 private:
     std::string value;
 };
 
+class PairExpression : public BinaryExpression
+{
+public:
+    using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
+};
+
 class NegExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
-
-class PrintExpression : public UnaryExpression {
-public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-};
 
 class FstExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class SndExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class HeadExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+   using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class TailExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+     using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 
 class RtoSExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class ItoSExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class ItoRExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class RtoIExpression : public UnaryExpression {
 public:
-    using UnaryExpression::UnaryExpression;    
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+     using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 
 class ArrayAddExpression : public BinaryExpression {
 public:
-    using BinaryExpression::BinaryExpression;
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+   using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class ArrayDelExpression : public BinaryExpression {
 public:
     using BinaryExpression::BinaryExpression;
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };
 
 class IfElseExpression : public Expression {
 public:
-    IfElseExpression(Expression* cond, Expression* true_expr, Expression* false_expr = nullptr) noexcept;
-    void destroy() noexcept override;
-    ASTNodeInterface* copy() const noexcept override;
-    bool equal(ASTNodeInterface* other) const noexcept override;
-    std::pair<bool, Datatype*> type_check() const noexcept override;
-    bool resolve_name(SymbolTable& symbol_table) noexcept override;
+    IfElseExpression(std::shared_ptr<Expression> _condition_expression, std::shared_ptr<Expression> _true_expression, std::shared_ptr<Expression> _false_expression) noexcept;
+
+    std::shared_ptr<Expression> get_condition_expression() const noexcept;
+    
+    std::shared_ptr<Expression> get_true_expression() const noexcept;
+
+    std::shared_ptr<Expression> get_false_expression() const noexcept;
+        
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 
 private:
-    Expression* condition;
-    Expression* true_expression;
-    Expression* false_expression;
+    std::shared_ptr<Expression> condition_expression;
+    std::shared_ptr<Expression> true_expression;
+    std::shared_ptr<Expression> false_expression;
+};
+
+class PrintExpression : public UnaryExpression {
+public:
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
 };

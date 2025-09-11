@@ -4,15 +4,14 @@
 #include <variant>
 #include <memory>
 #include "expression.hpp"
-#include "symbol_table.hpp"
-#include "datatype.hpp"
-#include "statement.hpp"
-#include "ast_node_interface.hpp"
+#include "utils.hpp"
+#include "semantic_analyzer.hpp"
 
 extern FILE* yyin;
 extern int yyparse();
-extern ASTNodeInterface* parser_result;
+extern Expression* parser_result;
 extern void cleanup_lexer();
+extern Environment global_env;
 
 int main(int argc, char* argv[])
 {
@@ -28,7 +27,7 @@ int main(int argc, char* argv[])
     
     int result = yyparse();
 
-    if (result == 0 )
+    if (result == 0)
         printf("Parse ok!\n");
     else
     {
@@ -36,8 +35,20 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-
-
+    if (parser_result) {
+        printf("Parsed expression: %s\n", parser_result->to_string().c_str());
+        
+        try {
+            printf("Evaluating expression...\n");
+            // Usar el entorno global que contiene las funciones definidas
+            auto result = parser_result->eval(global_env);
+            printf("Result: %s\n", result->to_string().c_str());
+        } catch (const std::exception& e) {
+            printf("Evaluation error: %s\n", e.what());
+        }
+    } else {
+        printf("No expression parsed\n");
+    }
     if (argc == 2) {
         fclose(yyin);
     }

@@ -1,20 +1,20 @@
 %{
-    #include <stdio.h>
+    #include <stdio.h> 
     #include "expression.hpp"
-    #include "statement.hpp"
-    #include "declaration.hpp"
-    #include "ast_node_interface.hpp"
+    #include "utils.hpp"
     #include <stdlib.h>
     #include <string.h>
+    #include <memory>
 
-    #define YYSTYPE ASTNodeInterface*
+    #define YYSTYPE Expression*
 
     extern int yylex();
     extern char* yytext;
-    extern char* last_identifier;
+extern char* last_identifier;
+extern char* prev_identifier;
     int yyerror(const char*);
 
-    ASTNodeInterface* parser_result{nullptr};
+    Expression* parser_result{nullptr};
 
     char* copy_string(const char* src) {
         if (!src) return nullptr;
@@ -23,13 +23,48 @@
         return dst;
     }
     
-    Body ast_to_body(ASTNodeInterface* node) {
-        Body body;
-        if (auto stmt = dynamic_cast<Statement*>(node)) {
-            body.push_back(stmt);
-        }
-        return body;
+// Función auxiliar para manejar el resultado del parser
+void set_parser_result(Expression* expr) {
+    parser_result = expr;
+}
+
+// Función auxiliar para manejar múltiples declaraciones
+Expression* handle_statements(Expression* prev, Expression* current) {
+    if (prev == nullptr) {
+        return current;
     }
+    
+    // Si el statement anterior es una función, la agregamos al entorno global
+    if (auto fun_expr = dynamic_cast<FunExpression*>(prev)) {
+        // Por simplicidad, devolvemos solo la expresión actual
+        // En una implementación completa, se manejaría un entorno global
+        return current;
+    }
+    
+    return current;
+}
+
+// Entorno global para almacenar funciones
+Environment global_env;
+
+// Función para crear una secuencia de declaraciones
+Expression* create_statement_sequence(Expression* prev, Expression* current) {
+    // Si la expresión anterior es una declaración de función, la almacenamos en el entorno global
+    if (prev != nullptr) {
+        auto fun_expr = dynamic_cast<FunExpression*>(prev);
+        if (fun_expr != nullptr) {
+            // Evaluamos la función para crear un closure y la almacenamos
+            auto closure = fun_expr->eval(global_env);
+            auto name_expr = std::dynamic_pointer_cast<NameExpression>(fun_expr->get_function_name_expression());
+            if (name_expr) {
+                global_env.add(name_expr->get_name(), closure);
+            }
+        }
+    }
+    
+    // Retornamos la expresión actual para evaluación
+    return current;
+}
 
 %}
 
@@ -99,48 +134,68 @@
 
 %% /* ---------- grammar ---------- */
 
-program : statements { parser_result = $0; }
+program : statement_list { set_parser_result($1); }
         ;
 
-statements : statements statement 
+statement_list : statement_list statement 
+        { $$ = create_statement_sequence($1, $2); }
     | statement 
+        { $$ = $1; }
     ;
 
-statement : declaration_statement 
-    | expr TOKEN_END
+statement : function_declaration 
+    | TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN 
+        { $$ = new PrintExpression(std::shared_ptr<Expression>($3)); }             
+    | variable_declaration
+    | expr { $$ = $1; }
     ;
 
-declaration_statement :  function_declaration
-    ;
-    
+variable_declaration : TOKEN_LET TOKEN_IDENTIFIER TOKEN_ASIG expr TOKEN_IN expr TOKEN_END
+    {
+        auto var_name = std::make_shared<NameExpression>(copy_string(last_identifier));
+        auto var_expr = std::shared_ptr<Expression>($4);
+        auto body_expr = std::shared_ptr<Expression>($6);
+        $$ = new LetExpression(var_name, var_expr, body_expr);
+    }
 
-function_declaration : 
-    | TOKEN_FUN TOKEN_IDENTIFIER TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN  expr TOKEN_END
-    ;
-
+function_declaration : TOKEN_FUN TOKEN_IDENTIFIER TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN  expr TOKEN_END
+    {
+        auto func_name = std::make_shared<NameExpression>(copy_string(prev_identifier));
+        auto param_name = std::make_shared<NameExpression>(copy_string(last_identifier));
+        auto body_expr = std::shared_ptr<Expression>(dynamic_cast<Expression*>($6));
+        $$ = new FunExpression(func_name, param_name, body_expr);
+    }
+;
 
 expr : expr TOKEN_OR and_expr            
     {
         $$ = new OrExpression(
-        dynamic_cast<Expression*>($1), 
-        dynamic_cast<Expression*>($3)
+        std::shared_ptr<Expression>($1), 
+        std::shared_ptr<Expression>($3)
     ); }
      | expr TOKEN_XOR and_expr     
     {
         $$ = new XorExpression(
-        dynamic_cast<Expression*>($1), 
-        dynamic_cast<Expression*>($3)
+        std::shared_ptr<Expression>($1), 
+        std::shared_ptr<Expression>($3)
     ); }    
     | and_expr                 
-    | variable_declaration                         
-        
+    | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN expr TOKEN_ELSE expr TOKEN_END
+    {
+        $$ = new IfElseExpression( 
+            std::shared_ptr<Expression>($3), 
+            std::shared_ptr<Expression>($5), 
+            std::shared_ptr<Expression>($7)
+        );
+    }                   
      ;
-variable_declaration : TOKEN_LET TOKEN_IDENTIFIER TOKEN_ASIG expr TOKEN_IN expr     
+
+
 
 and_expr : and_expr TOKEN_AND equality_expr  {
         $$ = new AndExpression(
-        dynamic_cast<Expression*>($1), 
-        dynamic_cast<Expression*>($3)
+        std::shared_ptr<Expression>($1), 
+        std::shared_ptr<Expression>($3)
     ); }
     | equality_expr                     
     ;
@@ -148,14 +203,14 @@ and_expr : and_expr TOKEN_AND equality_expr  {
 equality_expr : equality_expr TOKEN_EQUAL relational_expr   
         {
             $$ = new EqualExpression(
-            dynamic_cast<Expression*>($1), 
-            dynamic_cast<Expression*>($3)
+            std::shared_ptr<Expression>($1), 
+            std::shared_ptr<Expression>($3)
         ); }
     | equality_expr TOKEN_NOTEQUAL relational_expr 
         {
             $$ = new NotEqualExpression(
-            dynamic_cast<Expression*>($1), 
-            dynamic_cast<Expression*>($3)
+            std::shared_ptr<Expression>($1), 
+            std::shared_ptr<Expression>($3)
         ); }
         | relational_expr                              
               ;
@@ -163,26 +218,26 @@ equality_expr : equality_expr TOKEN_EQUAL relational_expr
 relational_expr : relational_expr TOKEN_LESS concat_expr     
             {
                 $$ = new LessExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | relational_expr TOKEN_GREAT concat_expr    
             {
                 $$ = new GreaterExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | relational_expr TOKEN_LESSEQL concat_expr  
             {
                 $$ = new LessEqExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | relational_expr TOKEN_GREATEQL concat_expr 
             {
                 $$ = new GreaterEqExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | concat_expr                                
         ;
@@ -191,8 +246,8 @@ relational_expr : relational_expr TOKEN_LESS concat_expr
 concat_expr : concat_expr TOKEN_CONCAT additive_expr 
             {
                 $$ = new ConcatExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); 
             }
         | additive_expr                          
@@ -202,14 +257,14 @@ concat_expr : concat_expr TOKEN_CONCAT additive_expr
 additive_expr : additive_expr TOKEN_ADD multiplicative_expr       
             {
                 $$ = new AddExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | additive_expr TOKEN_SUBSTRACT multiplicative_expr 
             {
                 $$ = new SubExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | multiplicative_expr                               
         ;
@@ -217,28 +272,28 @@ additive_expr : additive_expr TOKEN_ADD multiplicative_expr
 multiplicative_expr : multiplicative_expr TOKEN_MULTIPLY unary_expr 
             {
                 $$ = new MulExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | multiplicative_expr TOKEN_DIVIDE unary_expr    
             {
                 $$ = new DivExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); }
         | multiplicative_expr TOKEN_MOD unary_expr    
             {
                 $$ = new ModExpression(
-                dynamic_cast<Expression*>($1), 
-                dynamic_cast<Expression*>($3)
+                std::shared_ptr<Expression>($1), 
+                std::shared_ptr<Expression>($3)
             ); } 
         | unary_expr                                    
         ;
 
 unary_expr : TOKEN_NOT unary_expr     
-                { $$ = new NotExpression(dynamic_cast<Expression*>($2)); }
+                { $$ = new NotExpression(std::shared_ptr<Expression>($2)); }
            | TOKEN_SUBSTRACT unary_expr 
-                { $$ = new NegExpression(dynamic_cast<Expression*>($2)); }   
+                { $$ = new NegExpression(std::shared_ptr<Expression>($2)); }   
            | primary_expr                               
            ;
 
@@ -246,6 +301,8 @@ unary_expr : TOKEN_NOT unary_expr
 primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN   { $$ = $2; }     
              | literal                                 
              | function_call                           
+             | TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN 
+                { $$ = new PrintExpression(std::shared_ptr<Expression>($3)); }
              | TOKEN_IDENTIFIER    { $$ = new NameExpression(copy_string(last_identifier)); }                      
              ;
 
@@ -268,52 +325,59 @@ literal : TOKEN_INT
         ;
 
 array_literal : TOKEN_LCORCH elements TOKEN_RCORCH 
+                { $$ = $2; }
               | TOKEN_LCORCH TOKEN_RCORCH     
               | TOKEN_EMPTY    
               ;
 
-pair :TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN
+pair : TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN
+    {
+        $$ = new PairExpression(
+            std::shared_ptr<Expression>($2),
+            std::shared_ptr<Expression>($4)
+        );
+    }
 
 elements : elements TOKEN_COMA expr               
+            { $$ = $1; }
          | expr 
+            { $$ = $1; }
          ;
 
-function_call : TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN  
-                { $$ = new PrintExpression(dynamic_cast<Expression*>($3)); } 
-            | TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN     
-                { $$ = new FstExpression(dynamic_cast<Expression*>($3)); } 
+function_call :  TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN     
+                { $$ = new FstExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_SND TOKEN_LPAREN expr TOKEN_RPAREN  
-                { $$ = new SndExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new SndExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_RTOS TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new RtoSExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new RtoSExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_ETOS TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new ItoSExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new ItoSExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_ETOR TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new ItoRExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new ItoRExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new RtoIExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new RtoIExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new HeadExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new HeadExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new TailExpression(dynamic_cast<Expression*>($3)); } 
+                { $$ = new TailExpression(std::shared_ptr<Expression>($3)); } 
             | TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
                 { 
-                    Expression* func_name = new NameExpression(copy_string(last_identifier));
-                    $$ = new CallExpression(func_name, dynamic_cast<Expression*>($3));
+                    auto func_name = std::make_shared<NameExpression>(copy_string(last_identifier));
+                    $$ = new CallExpression(func_name, std::shared_ptr<Expression>($3));
                 }
             | TOKEN_ADD_ARRAY TOKEN_LPAREN array_literal TOKEN_COMA expr TOKEN_RPAREN 
                 {
                     $$ = new ArrayAddExpression(
-                    dynamic_cast<Expression*>($3), 
-                    dynamic_cast<Expression*>($5)
+                    std::shared_ptr<Expression>($3), 
+                    std::shared_ptr<Expression>($5)
                 ); } 
             | TOKEN_DEL_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN 
                  {
                     $$ = new ArrayDelExpression(
-                    dynamic_cast<Expression*>($3), 
-                    dynamic_cast<Expression*>($5)
+                    std::shared_ptr<Expression>($3), 
+                    std::shared_ptr<Expression>($5)
                 ); } 
-            | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN  expr  TOKEN_ELSE  expr  TOKEN_END
+           
               ;
 
 

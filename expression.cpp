@@ -1,1361 +1,911 @@
-#include <datatype.hpp>
-#include <expression.hpp>
-#include <symbol_table.hpp>
+#include "utils.hpp"
+#include "expression.hpp"
+#include "Exceptions.hpp"
 
-UnaryExpression::UnaryExpression(Expression* expr) noexcept
-    : expression{expr} {}
 
-void UnaryExpression::destroy() noexcept
+
+
+
+std::shared_ptr<Expression> NotExpression::eval(Environment& env) const
 {
-    this->expression->destroy();
-    delete this->expression;
-    this->expression = nullptr;
-}
-
-bool UnaryExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<UnaryExpression*>(other);
-    return other_expr != nullptr && this->expression->equal(other_expr->expression);
-}
-
-bool UnaryExpression::resolve_name(SymbolTable& symbol_table) noexcept
-{
-    return this->expression->resolve_name(symbol_table);
-}
-
-Expression* UnaryExpression::get_expression() const noexcept
-{
-    return this->expression;
-}
-
-
-ASTNodeInterface* NotExpression::copy() const noexcept
-{
-    return new NotExpression{dynamic_cast<Expression*>(this->expression->copy())};
-}
-
-bool NotExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<NotExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> NotExpression::type_check() const noexcept
-{
-    auto expr_type = this->expression->type_check();
-    bool result = expr_type.first && expr_type.second->is<BooleanDatatype>();
-    expr_type.second->destroy();
-    delete expr_type.second;
-    expr_type.second = nullptr;
-
-    if (!result)
-    {
-        return std::make_pair(false, nullptr);
+    auto expr = get_expression()->eval(env);
+    if (auto bool_expr = std::dynamic_pointer_cast<BoolExpression>(expr)) {
+        return std::make_shared<BoolExpression>(!bool_expr->get_value());
     }
+    throw TypeError("NotExpression: type error");
+}
 
-    return std::make_pair(true, new BooleanDatatype{});
+std::string NotExpression::to_string() const noexcept
+{
+    return "(not " + get_expression()->to_string() + ")";
 }
 
 
-////////////////////////////////////////////////////////////
-ASTNodeInterface* IncrementExpression::copy() const noexcept
+
+std::shared_ptr<Expression> AndExpression::eval(Environment& env) const
 {
-    return new IncrementExpression{dynamic_cast<Expression*>(this->expression->copy())};
-}
+    auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
 
-bool IncrementExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<IncrementExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> IncrementExpression::type_check() const noexcept
-{
-    auto expr_type = this->expression->type_check();
-    bool result = expr_type.second->is<IntegerDatatype>();
-    expr_type.second->destroy();
-    delete expr_type.second;
-    expr_type.second = nullptr;
-    
-    if (!result)
-    {
-        return std::make_pair(false, nullptr);
-    }
-
-    return std::make_pair(true, new IntegerDatatype{});
-}
-
-
-ASTNodeInterface* DecrementExpression::copy() const noexcept
-{
-    return new DecrementExpression{dynamic_cast<Expression*>(this->expression->copy())};
-}
-
-bool DecrementExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<DecrementExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> DecrementExpression::type_check() const noexcept
-{
-    auto expr_type = this->expression->type_check();
-    bool result = expr_type.second->is<IntegerDatatype>();
-    expr_type.second->destroy();
-    delete expr_type.second;
-    expr_type.second = nullptr;
-    
-    if (!result)
-    {
-        return std::make_pair(false, nullptr);
-    }
-
-    return std::make_pair(true, new IntegerDatatype{});
-}
-
-////////////////////////////////////////////////////////////
-
-BinaryExpression::BinaryExpression(Expression* left_expr, Expression* right_expr) noexcept
-    : left_expression{left_expr}, right_expression{right_expr} {}
-
-void BinaryExpression::destroy() noexcept
-{
-    this->left_expression->destroy();
-    delete this->left_expression;
-    this->left_expression = nullptr;
-
-    if (this->right_expression != nullptr)
-    {
-        this->right_expression->destroy();
-        delete this->right_expression;
-        this->right_expression = nullptr;
-    }
-}
-
-bool BinaryExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<BinaryExpression*>(other);
-    auto res = other_expr!= nullptr && this->left_expression->equal(other_expr->left_expression);
-
-    if (res && this->right_expression == nullptr)
-    {
-        return other_expr->right_expression == nullptr;
-    }
-
-    return res && this->right_expression->equal(other_expr->right_expression);
-}
-
-bool BinaryExpression::resolve_name(SymbolTable& symbol_table) noexcept
-{
-    bool left_result = this->left_expression->resolve_name(symbol_table);
-
-    if (left_result && this->right_expression != nullptr)
-    {
-        return this->right_expression->resolve_name(symbol_table);
-    }
-
-    return left_result;
-}
-
-std::pair<bool, Datatype*> BinaryExpression::boolean_operation_type_check() const noexcept
-{
-    auto left_expr_type = this->left_expression->type_check();
-    auto right_expr_type = this->right_expression->type_check();
-    bool result = left_expr_type.first &&
-        right_expr_type.first &&
-        left_expr_type.second->is<BooleanDatatype>() &&
-        right_expr_type.second->is<BooleanDatatype>();
-
-    left_expr_type.second->destroy();
-    delete left_expr_type.second;
-    left_expr_type.second = nullptr;
-
-    right_expr_type.second->destroy();
-    delete right_expr_type.second;
-    right_expr_type.second = nullptr;
-    
-    if (!result)
-    {
-        return std::make_pair(false, nullptr);
-    }
-
-    return std::make_pair(true, new BooleanDatatype{});
-}
-
-std::pair<bool, Datatype*> BinaryExpression::comparison_type_check() const noexcept
-{
-    auto left_expr_type = this->left_expression->type_check();
-    auto right_expr_type = this->right_expression->type_check();
-
-    if (!left_expr_type.first || !right_expr_type.first)
-    {
-        if (left_expr_type.second != nullptr)
-        {
-            left_expr_type.second->destroy();
-            delete left_expr_type.second;
-            left_expr_type.second = nullptr;
+    if (auto left_bool = std::dynamic_pointer_cast<BoolExpression>(left)) {
+        if (auto right_bool = std::dynamic_pointer_cast<BoolExpression>(right)) {
+            return std::make_shared<BoolExpression>(left_bool->get_value() && right_bool->get_value());
         }
+    }
 
-        if (right_expr_type.second != nullptr)
-        {
-            right_expr_type.second->destroy();
-            delete right_expr_type.second;
-            right_expr_type.second = nullptr;
+    throw TypeError("AndExpression: type error");
+}
+
+std::string AndExpression::to_string() const noexcept
+{
+    return "(and " + get_left_expression()->to_string() + " " + get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> XorExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
+    
+    auto left_bool = std::dynamic_pointer_cast<BoolExpression>(left_result);
+    auto right_bool = std::dynamic_pointer_cast<BoolExpression>(right_result);
+    
+    if (left_bool && right_bool) {
+        bool result = (left_bool->get_value() && !right_bool->get_value()) || 
+                     (!left_bool->get_value() && right_bool->get_value());
+        return std::make_shared<BoolExpression>(result);
+    }
+    
+    throw TypeError{"XOR operation requires boolean operands"};
+}
+
+std::string XorExpression::to_string() const noexcept {
+    return "(xor " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> OrExpression::eval(Environment& env) const
+{
+    auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
+
+    if (auto left_bool = std::dynamic_pointer_cast<BoolExpression>(left)) {
+        if (auto right_bool = std::dynamic_pointer_cast<BoolExpression>(right)) {
+            return std::make_shared<BoolExpression>(left_bool->get_value() || right_bool->get_value());
         }
-
-        return std::make_pair(false, nullptr);
     }
 
-    if (left_expr_type.second->is<VoidDatatype>() || left_expr_type.second->is<ArrayDatatype>() ||
-        left_expr_type.second->is<FunctionDatatype>() || right_expr_type.second->is<VoidDatatype>() ||
-        right_expr_type.second->is<ArrayDatatype>() || right_expr_type.second->is<FunctionDatatype>())
-    {
-        left_expr_type.second->destroy();
-        delete left_expr_type.second;
-        left_expr_type.second = nullptr;
+    throw TypeError("OrExpression: type error");
+}
 
-        right_expr_type.second->destroy();
-        delete right_expr_type.second;
-        right_expr_type.second = nullptr;
+std::string OrExpression::to_string() const noexcept
+{
+    return "(or " + get_left_expression()->to_string() + " " + get_right_expression()->to_string() + ")";
+}
 
-        return std::make_pair(false, nullptr);    
-    }
-
-    bool result = left_expr_type.second->equal(right_expr_type.second);
+std::shared_ptr<Expression> LessExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
     
-    left_expr_type.second->destroy();
-    delete left_expr_type.second;
-    left_expr_type.second = nullptr;
-
-    right_expr_type.second->destroy();
-    delete right_expr_type.second;
-    right_expr_type.second = nullptr;
+    auto left_int = std::dynamic_pointer_cast<IntExpression>(left_result);
+    auto right_int = std::dynamic_pointer_cast<IntExpression>(right_result);
+    auto left_real = std::dynamic_pointer_cast<RealExpression>(left_result);
+    auto right_real = std::dynamic_pointer_cast<RealExpression>(right_result);
     
-    if (!result)
-    {
-        return std::make_pair(false, nullptr);
+    if (left_int && right_int) {
+        return std::make_shared<BoolExpression>(left_int->get_value() < right_int->get_value());
     }
-
-    return std::make_pair(true, new BooleanDatatype{});
-}
-
-std::pair<bool, Datatype*> BinaryExpression::arithmetic_operation_type_check() const noexcept
-{
-    auto left_expr_type = this->left_expression->type_check();
-    auto right_expr_type = this->right_expression->type_check();
-    bool result = left_expr_type.first &&
-        right_expr_type.first &&
-        left_expr_type.second->is<IntegerDatatype>() &&
-        right_expr_type.second->is<IntegerDatatype>();
-
-    left_expr_type.second->destroy();
-    delete left_expr_type.second;
-    left_expr_type.second = nullptr;
-
-    right_expr_type.second->destroy();
-    delete right_expr_type.second;
-    right_expr_type.second = nullptr;
+    else if (left_real && right_real) {
+        return std::make_shared<BoolExpression>(left_real->get_value() < right_real->get_value());
+    }
+    else if (left_int && right_real) {
+        return std::make_shared<BoolExpression>(left_int->get_value() < right_real->get_value());
+    }
+    else if (left_real && right_int) {
+        return std::make_shared<BoolExpression>(left_real->get_value() < right_int->get_value());
+    }
     
-    if (!result)
-    {
-        return std::make_pair(false, nullptr);
+    throw TypeError{"Less than operation requires numeric operands"};
+}
+
+std::string LessExpression::to_string() const noexcept {
+    return "(< " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> LessEqExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
+    
+    auto left_int = std::dynamic_pointer_cast<IntExpression>(left_result);
+    auto right_int = std::dynamic_pointer_cast<IntExpression>(right_result);
+    auto left_real = std::dynamic_pointer_cast<RealExpression>(left_result);
+    auto right_real = std::dynamic_pointer_cast<RealExpression>(right_result);
+    
+    if (left_int && right_int) {
+        return std::make_shared<BoolExpression>(left_int->get_value() <= right_int->get_value());
     }
-
-    return std::make_pair(true, new IntegerDatatype{});
-}
-
-Expression* BinaryExpression::get_left_expression() const noexcept
-{
-    return this->left_expression;
-}
-
-Expression* BinaryExpression::get_right_expression() const noexcept
-{
-    return this->right_expression;
-}
-
-ASTNodeInterface* AndExpression::copy() const noexcept
-{
-    return new AndExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool AndExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<AndExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> AndExpression::type_check() const noexcept
-{
-    return this->boolean_operation_type_check();
-}
-
-
-ASTNodeInterface* XorExpression::copy() const noexcept {
-    return new XorExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool XorExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<XorExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> XorExpression::type_check() const noexcept {
-    return this->boolean_operation_type_check();
-}
-
-ASTNodeInterface* OrExpression::copy() const noexcept
-{
-    return new OrExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool OrExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<OrExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> OrExpression::type_check() const noexcept
-{
-    return this->boolean_operation_type_check();
-}
-
-ASTNodeInterface* LessExpression::copy() const noexcept
-{
-    return new LessExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool LessExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<LessExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> LessExpression::type_check() const noexcept
-{
-    return this->comparison_type_check();    
-}
-
-ASTNodeInterface* LessEqExpression::copy() const noexcept
-{
-    return new LessEqExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool LessEqExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<LessEqExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> LessEqExpression::type_check() const noexcept
-{
-    return this->comparison_type_check();    
-}
-
-ASTNodeInterface* GreaterExpression::copy() const noexcept
-{
-    return new GreaterExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool GreaterExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<GreaterExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> GreaterExpression::type_check() const noexcept
-{
-    return this->comparison_type_check();    
-}
-
-ASTNodeInterface* GreaterEqExpression::copy() const noexcept
-{
-    return new GreaterEqExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool GreaterEqExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<GreaterEqExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> GreaterEqExpression::type_check() const noexcept
-{
-    return this->comparison_type_check();    
-}
-
-ASTNodeInterface* EqualExpression::copy() const noexcept
-{
-    return new EqualExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool EqualExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<EqualExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> EqualExpression::type_check() const noexcept
-{
-    return this->comparison_type_check();    
-}
-
-ASTNodeInterface* NotEqualExpression::copy() const noexcept
-{
-    return new NotEqualExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool NotEqualExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<NotEqualExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> NotEqualExpression::type_check() const noexcept
-{
-    return this->comparison_type_check();    
-}
-
-ASTNodeInterface* AddExpression::copy() const noexcept
-{
-    return new AddExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool AddExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<AddExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> AddExpression::type_check() const noexcept
-{
-    return this->arithmetic_operation_type_check();    
-}
-
-ASTNodeInterface* SubExpression::copy() const noexcept
-{
-    return new SubExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool SubExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<SubExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> SubExpression::type_check() const noexcept
-{
-    return this->arithmetic_operation_type_check();    
-}
-
-ASTNodeInterface* MulExpression::copy() const noexcept
-{
-    return new MulExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool MulExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<MulExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> MulExpression::type_check() const noexcept
-{
-    return this->arithmetic_operation_type_check();    
-}
-
-ASTNodeInterface* DivExpression::copy() const noexcept
-{
-    return new DivExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-std::pair<bool, Datatype*> DivExpression::type_check() const noexcept
-{
-    return this->arithmetic_operation_type_check();    
-}
-
-bool DivExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<DivExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-ASTNodeInterface* ModExpression::copy() const noexcept
-{
-    return new ModExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool ModExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<ModExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> ModExpression::type_check() const noexcept
-{
-    return this->arithmetic_operation_type_check();    
-}
-
-ASTNodeInterface* ArgExpression::copy() const noexcept
-{
-    Expression* left_copy = dynamic_cast<Expression*>(this->left_expression->copy());
-    Expression* right_copy = nullptr;
-
-    if (this->right_expression != nullptr)
-    {
-        right_copy = dynamic_cast<Expression*>(this->right_expression->copy());
+    else if (left_real && right_real) {
+        return std::make_shared<BoolExpression>(left_real->get_value() <= right_real->get_value());
     }
-
-    return new ArgExpression{left_copy, right_copy};
-}
-
-bool ArgExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<ArgExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> ArgExpression::type_check() const noexcept
-{
-    return this->left_expression->type_check();
-}
-
-ASTNodeInterface* CallExpression::copy() const noexcept
-{
-    Expression* left_copy = dynamic_cast<Expression*>(this->left_expression->copy());
-    Expression* right_copy = nullptr;
-
-    if (this->right_expression != nullptr)
-    {
-        right_copy = dynamic_cast<Expression*>(this->right_expression->copy());
+    else if (left_int && right_real) {
+        return std::make_shared<BoolExpression>(left_int->get_value() <= right_real->get_value());
     }
-
-    return new CallExpression{left_copy, right_copy};
+    else if (left_real && right_int) {
+        return std::make_shared<BoolExpression>(left_real->get_value() <= right_int->get_value());
+    }
+    
+    throw TypeError{"LessEq than operation requires numeric operands"};
 }
 
-bool CallExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<CallExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
+std::string LessEqExpression::to_string() const noexcept {
+    return "(<= " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
 }
 
-std::pair<bool, Datatype*> CallExpression::type_check() const noexcept
-{
-    auto left_type = this->left_expression->type_check();
+std::shared_ptr<Expression> GreaterExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
+    
+    auto left_int = std::dynamic_pointer_cast<IntExpression>(left_result);
+    auto right_int = std::dynamic_pointer_cast<IntExpression>(right_result);
+    auto left_real = std::dynamic_pointer_cast<RealExpression>(left_result);
+    auto right_real = std::dynamic_pointer_cast<RealExpression>(right_result);
+    
+    if (left_int && right_int) {
+        return std::make_shared<BoolExpression>(left_int->get_value() > right_int->get_value());
+    }
+    else if (left_real && right_real) {
+        return std::make_shared<BoolExpression>(left_real->get_value() > right_real->get_value());
+    }
+    else if (left_int && right_real) {
+        return std::make_shared<BoolExpression>(left_int->get_value() > right_real->get_value());
+    }
+    else if (left_real && right_int) {
+        return std::make_shared<BoolExpression>(left_real->get_value() > right_int->get_value());
+    }
+    
+    throw TypeError{"Greater than operation requires numeric operands"};
+}
 
-    if (!left_type.first || !left_type.second->is<FunctionDatatype>())
-    {
-        if (left_type.second != nullptr)
-        {
-            left_type.second->destroy();
-            delete left_type.second;
-            left_type.second = nullptr;
+std::string GreaterExpression::to_string() const noexcept {
+    return "(> " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> GreaterEqExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
+    
+    auto left_int = std::dynamic_pointer_cast<IntExpression>(left_result);
+    auto right_int = std::dynamic_pointer_cast<IntExpression>(right_result);
+    auto left_real = std::dynamic_pointer_cast<RealExpression>(left_result);
+    auto right_real = std::dynamic_pointer_cast<RealExpression>(right_result);
+    
+    if (left_int && right_int) {
+        return std::make_shared<BoolExpression>(left_int->get_value() >= right_int->get_value());
+    }
+    else if (left_real && right_real) {
+        return std::make_shared<BoolExpression>(left_real->get_value() >= right_real->get_value());
+    }
+    else if (left_int && right_real) {
+        return std::make_shared<BoolExpression>(left_int->get_value() >= right_real->get_value());
+    }
+    else if (left_real && right_int) {
+        return std::make_shared<BoolExpression>(left_real->get_value() >= right_int->get_value());
+    }
+    
+    throw TypeError{"GreaterEq than operation requires numeric operands"};
+}
+
+std::string GreaterEqExpression::to_string() const noexcept {
+    return "(>= " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> EqualExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
+    
+    auto left_int = std::dynamic_pointer_cast<IntExpression>(left_result);
+    auto right_int = std::dynamic_pointer_cast<IntExpression>(right_result);
+    auto left_real = std::dynamic_pointer_cast<RealExpression>(left_result);
+    auto right_real = std::dynamic_pointer_cast<RealExpression>(right_result);
+    auto left_bool = std::dynamic_pointer_cast<BoolExpression>(left_result);
+    auto right_bool = std::dynamic_pointer_cast<BoolExpression>(right_result);
+    auto left_str = std::dynamic_pointer_cast<StrExpression>(left_result);
+    auto right_str = std::dynamic_pointer_cast<StrExpression>(right_result);
+    
+    if (left_int && right_int) {
+        return std::make_shared<BoolExpression>(left_int->get_value() == right_int->get_value());
+    }
+    else if (left_real && right_real) {
+        return std::make_shared<BoolExpression>(left_real->get_value() == right_real->get_value());
+    }
+    else if (left_int && right_real) {
+        return std::make_shared<BoolExpression>(left_int->get_value() == right_real->get_value());
+    }
+    else if (left_real && right_int) {
+        return std::make_shared<BoolExpression>(left_real->get_value() == right_int->get_value());
+    }
+    else if (left_bool && right_bool) {
+        return std::make_shared<BoolExpression>(left_bool->get_value() == right_bool->get_value());
+    }
+    else if (left_str && right_str) {
+        return std::make_shared<BoolExpression>(left_str->get_value() == right_str->get_value());
+    }
+    
+    return std::make_shared<BoolExpression>(false);
+}
+
+std::string EqualExpression::to_string() const noexcept {
+    return "(== " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> NotEqualExpression::eval(Environment& env) const {
+    auto equal_result = EqualExpression(get_left_expression(), get_right_expression()).eval(env);
+    
+    if (auto equal_bool = std::dynamic_pointer_cast<BoolExpression>(equal_result)) {
+        return std::make_shared<BoolExpression>(!equal_bool->get_value());
+    }
+    
+    throw TypeError{"Internal error in not equal comparison"};
+}
+
+std::string NotEqualExpression::to_string() const noexcept {
+    return "(!= " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+
+std::shared_ptr<Expression> AddExpression::eval(Environment& env) const
+{
+    auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
+
+   if (auto left_int = std::dynamic_pointer_cast<IntExpression>(left)) {
+        if (auto right_int = std::dynamic_pointer_cast<IntExpression>(right)) {
+            return std::make_shared<IntExpression>(left_int->get_value() + right_int->get_value());
         }
-        return std::make_pair(false, nullptr);
     }
 
-    auto fct_type = dynamic_cast<FunctionDatatype*>(left_type.second);
-    auto arg_expr = dynamic_cast<ArgExpression*>(this->right_expression);
-
-    for (const auto& param: fct_type->get_parameters())
-    {
-        if (arg_expr == nullptr)
-        {
-            left_type.second->destroy();
-            delete left_type.second;
-            left_type.second = nullptr;
-            return std::make_pair(false, nullptr);
+    if (auto left_real = std::dynamic_pointer_cast<RealExpression>(left)) {
+        if (auto right_real = std::dynamic_pointer_cast<RealExpression>(right)) {
+            return std::make_shared<RealExpression>(left_real->get_value() + right_real->get_value());
         }
-    
-        auto arg_type = arg_expr->get_left_expression()->type_check();
+    }
 
-        if (!arg_type.second->equal(param.second))
-        {
-            arg_type.second->destroy();
-            delete arg_type.second;
-            arg_type.second = nullptr;
+    throw TypeError("AddExpression: type error");
+}
 
-            left_type.second->destroy();
-            delete left_type.second;
-            left_type.second = nullptr;
+std::string AddExpression::to_string() const noexcept
+{
+    return "(+" +
+        BinaryExpression::get_left_expression()->to_string() +
+        BinaryExpression::get_right_expression()->to_string() + ")";
+}
 
-            return std::make_pair(false, nullptr);
+std::shared_ptr<Expression> SubExpression::eval(Environment& env) const
+{
+    auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
+
+   if (auto left_int = std::dynamic_pointer_cast<IntExpression>(left)) {
+        if (auto right_int = std::dynamic_pointer_cast<IntExpression>(right)) {
+            return std::make_shared<IntExpression>(left_int->get_value() - right_int->get_value());
         }
-
-        arg_type.second->destroy();
-        delete arg_type.second;
-        arg_type.second = nullptr;
-
-        arg_expr = dynamic_cast<ArgExpression*>(arg_expr->get_right_expression());
     }
 
-    auto result = dynamic_cast<Datatype*>(fct_type->get_return_type()->copy());
+    if (auto left_real = std::dynamic_pointer_cast<RealExpression>(left)) {
+        if (auto right_real = std::dynamic_pointer_cast<RealExpression>(right)) {
+            return std::make_shared<RealExpression>(left_real->get_value() - right_real->get_value());
+        }
+    }
 
-    left_type.second->destroy();
-    delete left_type.second;
-    left_type.second = nullptr;
+    throw TypeError("SubExpression: type error");
+}
 
-    if (arg_expr != nullptr)
+std::string SubExpression::to_string() const noexcept
+{
+    return "(-" +
+        BinaryExpression::get_left_expression()->to_string() +
+        BinaryExpression::get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> MulExpression::eval(Environment& env) const
+{
+    auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
+
+   if (auto left_int = std::dynamic_pointer_cast<IntExpression>(left)) {
+        if (auto right_int = std::dynamic_pointer_cast<IntExpression>(right)) {
+            return std::make_shared<IntExpression>(left_int->get_value() * right_int->get_value());
+        }
+    }
+
+    if (auto left_real = std::dynamic_pointer_cast<RealExpression>(left)) {
+        if (auto right_real = std::dynamic_pointer_cast<RealExpression>(right)) {
+            return std::make_shared<RealExpression>(left_real->get_value() * right_real->get_value());
+        }
+    }   
+    throw TypeError("MulExpression: type error");
+
+}
+
+std::string MulExpression::to_string() const noexcept
+{
+    return "(*" +
+        BinaryExpression::get_left_expression()->to_string() +
+        BinaryExpression::get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> DivExpression::eval(Environment& env) const
+{
+   auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
+
+   if (auto left_int = std::dynamic_pointer_cast<IntExpression>(left)) {
+        if (auto right_int = std::dynamic_pointer_cast<IntExpression>(right)) {
+            return std::make_shared<IntExpression>(left_int->get_value() / right_int->get_value());
+        }
+    }
+
+    if (auto left_real = std::dynamic_pointer_cast<RealExpression>(left)) {
+        if (auto right_real = std::dynamic_pointer_cast<RealExpression>(right)) {
+            return std::make_shared<RealExpression>(left_real->get_value() / right_real->get_value());
+        }
+    }   
+    throw TypeError("DivExpression: type error");}
+
+std::string DivExpression::to_string() const noexcept
+{
+    return "(/" +
+        BinaryExpression::get_left_expression()->to_string() +
+        BinaryExpression::get_right_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> ModExpression::eval(Environment& env) const
+{
+    auto left = get_left_expression()->eval(env);
+    auto right = get_right_expression()->eval(env);
+
+   if (auto left_int = std::dynamic_pointer_cast<IntExpression>(left)) {
+        if (auto right_int = std::dynamic_pointer_cast<IntExpression>(right)) {
+            return std::make_shared<IntExpression>(left_int->get_value() % right_int->get_value());
+        }
+    }
+
+    throw TypeError("ModExpression: type error - modulo only works with integers");
+}
+
+std::string ModExpression::to_string() const noexcept
+{
+    return "(%" +
+        BinaryExpression::get_left_expression()->to_string() +
+        BinaryExpression::get_right_expression()->to_string() + ")";
+}
+
+
+
+
+std::shared_ptr<Expression> CallExpression::eval(Environment& env) const
+{
+    // El primer parámetro ya es un NameExpression, no necesitamos evaluarlo
+    auto function_name = std::dynamic_pointer_cast<NameExpression>(BinaryExpression::get_left_expression());
+
+    if (function_name == nullptr)
     {
-        result->destroy();
-        delete result;
-        result = nullptr;
-        return std::make_pair(false, nullptr);
+        throw TypeError{"call applied to non-identifier"};
     }
 
-    return std::make_pair(true, result);    
-}
+    auto expression = env.lookup(function_name->get_name());
 
-ASTNodeInterface* SubscriptExpression::copy() const noexcept
-{
-    return new SubscriptExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool SubscriptExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<SubscriptExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> SubscriptExpression::type_check() const noexcept
-{
-    auto left_type = this->left_expression->type_check();
-    auto right_type = this->right_expression->type_check();
-
-    if (!left_type.second->is<ArrayDatatype>() || !right_type.second->is<IntegerDatatype>())
+    if (expression == nullptr)
     {
-        left_type.second->destroy();
-        delete left_type.second;
-        left_type.second = nullptr;
-        
-        right_type.second->destroy();
-        delete right_type.second;
-        right_type.second = nullptr;
-
-        delete right_type.second;
-        return std::make_pair(false, nullptr);
+        throw std::runtime_error{"function " + function_name->get_name() + " does not exist"};
     }
 
-    auto result_type = dynamic_cast<Datatype*>(dynamic_cast<ArrayDatatype*>(left_type.second)->get_inner_datatype()->copy());
+    auto closure = std::dynamic_pointer_cast<Closure>(expression);
 
-    left_type.second->destroy();
-    delete left_type.second;
-    left_type.second = nullptr;
+    if (closure == nullptr)
+    {
+        throw TypeError{"call applied to non-closure"};
+    }
+
+    Environment new_env = closure->get_environment();
+    auto function = std::dynamic_pointer_cast<FunExpression>(closure->get_function_expression());
+
+    new_env.add(function->get_parameter_name(), BinaryExpression::get_right_expression()->eval(env));
+    new_env.add(function->get_name(), closure);
     
-    right_type.second->destroy();
-    delete right_type.second;
-    right_type.second = nullptr;
-
-    return std::make_pair(true, result_type);
+    return function->get_body_expression()->eval(new_env);
 }
 
-ASTNodeInterface* AssignmentExpression::copy() const noexcept
+std::string CallExpression::to_string() const noexcept
 {
-    return new AssignmentExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
+    return "(call"
+        + BinaryExpression::get_left_expression()->to_string()
+        + BinaryExpression::get_right_expression()->to_string() + ")";
 }
 
-bool AssignmentExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<AssignmentExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other_expr);
-}
 
-std::pair<bool, Datatype*> AssignmentExpression::type_check() const noexcept
-{
-    auto left_type = this->left_expression->type_check();
-    auto right_type = this->right_expression->type_check();
-    bool result = left_type.first &&
-        right_type.first &&
-        left_type.second->equal(right_type.second);
-
-    right_type.second->destroy();
-    delete right_type.second;
-    right_type.second = nullptr;
-
-    if (!result)
-    {
-        left_type.second->destroy();
-        delete left_type.second;
-        left_type.second = nullptr;
-        left_type.first = false;
+std::shared_ptr<Expression> AssignmentExpression::eval(Environment& env) const {
+    auto right_value = get_right_expression()->eval(env);
+    auto left_name_expr = std::dynamic_pointer_cast<NameExpression>(get_left_expression());
+    
+    if (!left_name_expr) {
+        throw TypeError{"Left side of assignment must be a variable name"};
     }
-
-    return left_type;
+    
+    std::string var_name = left_name_expr->get_name();
+    
+    env.add(var_name, right_value);
+    
+    return right_value;
 }
 
-void LeafExpression::destroy() noexcept {}
-
-bool LeafExpression::resolve_name(SymbolTable& symbol_table) noexcept
-{
-    return true;
+std::string AssignmentExpression::to_string() const noexcept {
+    return "(= " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
 }
 
-NameExpression::NameExpression(std::string_view _name) noexcept
+
+
+NameExpression::NameExpression(const std::string& _name) noexcept
     : name{_name} {}
 
-ASTNodeInterface* NameExpression::copy() const noexcept
-{
-    return new NameExpression{this->name};
+const std::string& NameExpression::get_name() const noexcept {
+    return name;
 }
 
-bool NameExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<NameExpression*>(other);
-    return other_expr != nullptr && this->name == other_expr->name;
-}
+std::shared_ptr<Expression> NameExpression::eval(Environment& env) const {
 
-bool NameExpression::resolve_name(SymbolTable& symbol_table) noexcept
-{
-    this->symbol = symbol_table.lookup(this->name);
-    return this->symbol != nullptr;
-}
-
-std::pair<bool, Datatype*> NameExpression::type_check() const noexcept
-{
-    if (symbol == nullptr)
-    {
-        return std::make_pair(false, nullptr);
+    auto value = env.lookup(name);
+    
+    if (value == nullptr) {
+        throw std::runtime_error("Undefined variable: " + name);
     }
-
-    return std::make_pair(true, dynamic_cast<Datatype*>(this->symbol->type->copy()));    
+    
+    return value;
 }
 
+std::string NameExpression::to_string() const noexcept {
+    return name;
+}
 
 RealExpression::RealExpression(double _value) noexcept
     : value{_value} {}
 
-ASTNodeInterface* RealExpression::copy() const noexcept
+double RealExpression::get_value() const noexcept 
 {
-    return new RealExpression{this->value};
+    return value;
 }
 
-bool RealExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<RealExpression*>(other);
-    return other_expr != nullptr && this->value == other_expr->value;
+std::shared_ptr<Expression> RealExpression::eval(Environment&) const {
+    return std::make_shared<RealExpression>(value);
 }
 
-std::pair<bool, Datatype*> RealExpression::type_check() const noexcept
-{
-    return std::make_pair(true, new RealDatatype{});
+std::string RealExpression::to_string() const noexcept {
+   return "(" + std::to_string(value) + ")";
 }
 
 
 IntExpression::IntExpression(int _value) noexcept
     : value{_value} {}
 
-ASTNodeInterface* IntExpression::copy() const noexcept
+int IntExpression::get_value() const noexcept
 {
-    return new IntExpression{this->value};
+    return value;
 }
 
-bool IntExpression::equal(ASTNodeInterface* other) const noexcept
+std::shared_ptr<Expression> IntExpression::eval(Environment&) const
 {
-    auto other_expr = dynamic_cast<IntExpression*>(other);
-    return other_expr != nullptr && this->value == other_expr->value;
+    return std::make_shared<IntExpression>(value);
 }
 
-std::pair<bool, Datatype*> IntExpression::type_check() const noexcept
+std::string IntExpression::to_string() const noexcept
 {
-    return std::make_pair(true, new IntegerDatatype{});
-}
-
-
-BoolExpression::BoolExpression(bool _value) noexcept  : value{_value} {}
-
-ASTNodeInterface* BoolExpression::copy() const noexcept
-{
-    return new BoolExpression{this->value};
-}
-
-bool BoolExpression::equal(ASTNodeInterface* other) const noexcept
-{
-    auto other_expr = dynamic_cast<BoolExpression*>(other);
-    return other_expr != nullptr && this->value == other_expr->value;
-}
-
-std::pair<bool, Datatype*> BoolExpression::type_check() const noexcept
-{
-    return std::make_pair(true, new BooleanDatatype{});
+    return "(" + std::to_string(value) + ")";
 }
 
 
-
-StrExpression::StrExpression(std::string_view _value) noexcept
+BoolExpression::BoolExpression(bool _value) noexcept
     : value{_value} {}
 
-ASTNodeInterface* StrExpression::copy() const noexcept
+bool BoolExpression::get_value() const noexcept 
 {
-    return new StrExpression{this->value};
+    return value;
 }
 
-bool StrExpression::equal(ASTNodeInterface* other) const noexcept
+std::shared_ptr<Expression> BoolExpression::eval(Environment&) const {
+    return std::make_shared<BoolExpression>(value);
+}
+
+std::string BoolExpression::to_string() const noexcept {
+   return "(" + std::to_string(value) + ")";
+}
+
+
+StrExpression::StrExpression(const std::string& _value) noexcept
+    : value{_value} {}
+
+const std::string& StrExpression::get_value() const noexcept {
+    return value;
+}
+
+std::shared_ptr<Expression> StrExpression::eval(Environment&) const {
+    return std::make_shared<StrExpression>(value);
+}
+
+std::string StrExpression::to_string() const noexcept {
+    return "\"(" + value + ")\"";
+}
+
+
+std::shared_ptr<Expression> PairExpression::eval(Environment& env) const
 {
-    auto other_expr = dynamic_cast<StrExpression*>(other);
-    return other_expr != nullptr && this->value == other_expr->value;
+    return std::make_shared<PairExpression>(
+        BinaryExpression::get_left_expression()->eval(env),
+        BinaryExpression::get_right_expression()->eval(env)
+    );
 }
 
-std::pair<bool, Datatype*> StrExpression::type_check() const noexcept
+std::string PairExpression::to_string() const noexcept
 {
-    return std::make_pair(true, new StringDatatype{});    
+    return "(pair"
+        + BinaryExpression::get_left_expression()->to_string()
+        + BinaryExpression::get_right_expression()->to_string() + ")";
 }
 
-
-ASTNodeInterface* ConcatExpression::copy() const noexcept {
-    return new ConcatExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-bool ConcatExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<ConcatExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> ConcatExpression::type_check() const noexcept {
-    auto left_type = this->left_expression->type_check();
-    auto right_type = this->right_expression->type_check();
-
-
-    bool result = left_type.first && right_type.first &&
-                 left_type.second->is<StringDatatype>() && 
-                 right_type.second->is<StringDatatype>();
+std::shared_ptr<Expression> ConcatExpression::eval(Environment& env) const {
+    auto left_result = get_left_expression()->eval(env);
+    auto right_result = get_right_expression()->eval(env);
     
-    left_type.second->destroy();
-    delete left_type.second;
-    right_type.second->destroy();
-    delete right_type.second;
+    auto left_str = std::dynamic_pointer_cast<StrExpression>(left_result);
+    auto right_str = std::dynamic_pointer_cast<StrExpression>(right_result);
     
-    if (!result) {
-        return std::make_pair(false, nullptr);
-    }    
-    return std::make_pair(true, new StringDatatype{});
-}
-
-
-ASTNodeInterface* NegExpression::copy() const noexcept {
-    return new NegExpression{dynamic_cast<Expression*>(this->expression->copy())};
-}
-
-bool NegExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<NegExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> NegExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    bool result = expr_type.first && expr_type.second->is<RealDatatype>();
-    
-    expr_type.second->destroy();
-    delete expr_type.second;
-    
-    if (!result) {
-        return std::make_pair(false, nullptr);
+    if (left_str && right_str) {
+        std::string result = left_str->get_value() + right_str->get_value();
+        return std::make_shared<StrExpression>(result);
     }
     
-    return std::make_pair(true, new RealDatatype{});
+    throw TypeError{"String concatenation requires both operands to be strings"};
+}
+
+std::string ConcatExpression::to_string() const noexcept {
+    return "(concat " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
 }
 
 
-ASTNodeInterface* PrintExpression::copy() const noexcept {
-    return new PrintExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
+std::shared_ptr<Expression> NegExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<IntExpression>(UnaryExpression::get_expression()->eval(env));
 
-bool PrintExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<PrintExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> PrintExpression::type_check() const noexcept {
-    // Print can accept any type, so we just check that the expression is valid
-    auto expr_type = this->expression->type_check();
-    bool result = expr_type.first;
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, new VoidDatatype());
-}
-
-
-
-ASTNodeInterface* FstExpression::copy() const noexcept {
-    return new FstExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool FstExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<FstExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> FstExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is a pair type
-    // For now, we'll assume it returns the first element's type
-    // You'll need to implement proper pair type checking
-    
-    bool result = expr_type.first;
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // This is a placeholder - you need to implement proper pair type checking
-        return_type = new IntegerDatatype(); // Default return type
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-ASTNodeInterface* SndExpression::copy() const noexcept {
-    return new SndExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool SndExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<SndExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> SndExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    bool result = expr_type.first;
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // This is a placeholder - you need to implement proper pair type checking
-        return_type = new IntegerDatatype(); // Default return type
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-ASTNodeInterface* HeadExpression::copy() const noexcept {
-    return new HeadExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool HeadExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<HeadExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> HeadExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is an array type
-    bool result = expr_type.first && expr_type.second->is<HeadExpression>();
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        auto array_type = dynamic_cast<ArrayDatatype*>(expr_type.second);
-        return_type = dynamic_cast<Datatype*>(array_type->get_inner_datatype()->copy());
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-ASTNodeInterface* TailExpression::copy() const noexcept {
-    return new TailExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool TailExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<TailExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> TailExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is an array type
-    bool result = expr_type.first && expr_type.second->is<TailExpression>();
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // Tail returns the same array type without the first element
-        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-
-ASTNodeInterface* RtoSExpression::copy() const noexcept {
-    return new RtoSExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool RtoSExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<RtoSExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> RtoSExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is an array type
-    bool result = expr_type.first && expr_type.second->is<RealDatatype>();
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // Tail returns the same array type without the first element
-        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-ASTNodeInterface* ItoSExpression::copy() const noexcept {
-    return new ItoSExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool ItoSExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<ItoSExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> ItoSExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is an array type
-    bool result = expr_type.first && expr_type.second->is<IntegerDatatype>();
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // Tail returns the same array type without the first element
-        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-ASTNodeInterface* ItoRExpression::copy() const noexcept {
-    return new ItoRExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool ItoRExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<ItoRExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> ItoRExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is an array type
-    bool result = expr_type.first && expr_type.second->is<IntegerDatatype>();
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // Tail returns the same array type without the first element
-        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-ASTNodeInterface* RtoIExpression::copy() const noexcept {
-    return new ItoSExpression(dynamic_cast<Expression*>(this->expression->copy()));
-}
-
-bool RtoIExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<RtoIExpression*>(other);
-    return other_expr != nullptr && UnaryExpression::equal(other);
-}
-
-std::pair<bool, Datatype*> RtoIExpression::type_check() const noexcept {
-    auto expr_type = this->expression->type_check();
-    
-    // Check if the expression is an array type
-    bool result = expr_type.first && expr_type.second->is<RealDatatype>();
-    Datatype* return_type = nullptr;
-    
-    if (result) {
-        // Tail returns the same array type without the first element
-        return_type = dynamic_cast<Datatype*>(expr_type.second->copy());
-    }
-    
-    if (expr_type.second != nullptr) {
-        expr_type.second->destroy();
-        delete expr_type.second;
-    }
-    
-    return std::make_pair(result, return_type);
-}
-
-
-
-
-
-
-ASTNodeInterface* ArrayAddExpression::copy() const noexcept {
-    return new ArrayAddExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
-}
-
-std::pair<bool, Datatype*> ArrayAddExpression::type_check() const noexcept {
-    auto left_type = this->left_expression->type_check();
-    auto right_type = this->right_expression->type_check();
-
-    // Verificar que el izquierdo sea un array y el derecho sea del tipo interno del array
-    bool result = left_type.first && right_type.first &&
-                 left_type.second->is<ArrayDatatype>() &&
-                 dynamic_cast<ArrayDatatype*>(left_type.second)->get_inner_datatype()->equal(right_type.second);
-
-    if (result) {
-        // Retornar el mismo tipo de array
-        Datatype* return_type = dynamic_cast<Datatype*>(left_type.second->copy());
-        left_type.second->destroy();
-        delete left_type.second;
-        right_type.second->destroy();
-        delete right_type.second;
-        return std::make_pair(true, return_type);
+    if (result == nullptr)
+    {
+        throw TypeError{"negation applied to non-int"};
     }
 
-    // Limpiar memoria en caso de error
-    if (left_type.second != nullptr) {
-        left_type.second->destroy();
-        delete left_type.second;
-    }
-    if (right_type.second != nullptr) {
-        right_type.second->destroy();
-        delete right_type.second;
-    }
-    return std::make_pair(false, nullptr);
+    return std::make_shared<IntExpression>(-result->get_value());
 }
 
-bool ArrayAddExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<ArrayAddExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
+std::string NegExpression::to_string() const noexcept
+{
+    return "(-" + UnaryExpression::get_expression()->to_string() + ")";
 }
 
-ASTNodeInterface* ArrayDelExpression::copy() const noexcept {
-    return new ArrayDelExpression{
-        dynamic_cast<Expression*>(this->left_expression->copy()),
-        dynamic_cast<Expression*>(this->right_expression->copy())
-    };
+std::shared_ptr<Expression> FstExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<PairExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"fst applied to non-pair"};
+    }
+
+    return result->get_left_expression();
 }
 
-std::pair<bool, Datatype*> ArrayDelExpression::type_check() const noexcept {
-    auto left_type = this->left_expression->type_check();
-    auto right_type = this->right_expression->type_check();
-
-    // Verificar que el izquierdo sea un array y el derecho sea entero (índice)
-    bool result = left_type.first && right_type.first &&
-                 left_type.second->is<ArrayDatatype>() &&
-                 right_type.second->is<IntegerDatatype>();
-
-    if (result) {
-        // Retornar el mismo tipo de array
-        Datatype* return_type = dynamic_cast<Datatype*>(left_type.second->copy());
-        left_type.second->destroy();
-        delete left_type.second;
-        right_type.second->destroy();
-        delete right_type.second;
-        return std::make_pair(true, return_type);
-    }
-
-    // Limpiar memoria en caso de error
-    if (left_type.second != nullptr) {
-        left_type.second->destroy();
-        delete left_type.second;
-    }
-    if (right_type.second != nullptr) {
-        right_type.second->destroy();
-        delete right_type.second;
-    }
-    return std::make_pair(false, nullptr);
+std::string FstExpression::to_string() const noexcept
+{
+    return "(fst" + UnaryExpression::get_expression()->to_string() + ")";
 }
 
-bool ArrayDelExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<ArrayDelExpression*>(other);
-    return other_expr != nullptr && BinaryExpression::equal(other);
+std::shared_ptr<Expression> SndExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<PairExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"snd applied to non-pair"};
+    }
+
+    return result->get_right_expression();
+}
+
+std::string SndExpression::to_string() const noexcept
+{
+    return "(snd" + UnaryExpression::get_expression()->to_string() + ")";
 }
 
 
-IfElseExpression::IfElseExpression(Expression* cond, Expression* true_expr, Expression* false_expr) noexcept
-    : condition{cond}, true_expression{true_expr}, false_expression{false_expr} {}
 
-void IfElseExpression::destroy() noexcept {
-    this->condition->destroy();
-    delete this->condition;
-    this->condition = nullptr;
+std::shared_ptr<Expression> HeadExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<PairExpression>(UnaryExpression::get_expression()->eval(env));
 
-    this->true_expression->destroy();
-    delete this->true_expression;
-    this->true_expression = nullptr;
+    if (result == nullptr)
+    {
+        throw TypeError{"head applied to non-pair"};
+    }
 
-    if (this->false_expression != nullptr) {
-        this->false_expression->destroy();
-        delete this->false_expression;
-        this->false_expression = nullptr;
+    return result->get_left_expression();
+}
+
+std::string HeadExpression::to_string() const noexcept
+{
+    return "(head" + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+std::shared_ptr<Expression> TailExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<PairExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"tail applied to non-pair"};
+    }
+
+    return result->get_right_expression();
+}
+
+std::string TailExpression::to_string() const noexcept
+{
+    return "(tail" + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+
+
+std::shared_ptr<Expression> RtoSExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<RealExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"rtos applied to non-real"};
+    }
+
+    return std::make_shared<StrExpression>(std::to_string(result->get_value()));
+}
+
+std::string RtoSExpression::to_string() const noexcept
+{
+    return "(rtos" + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+
+std::shared_ptr<Expression> ItoSExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<IntExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"itos applied to non-int"};
+    }
+
+    return std::make_shared<StrExpression>(std::to_string(result->get_value()));
+}
+
+std::string ItoSExpression::to_string() const noexcept
+{
+    return "(itos" + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+
+std::shared_ptr<Expression> ItoRExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<IntExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"itor applied to non-int"};
+    }
+
+    return std::make_shared<RealExpression>(static_cast<double>(result->get_value()));
+}
+
+std::string ItoRExpression::to_string() const noexcept
+{
+    return "(itor" + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+
+std::shared_ptr<Expression> RtoIExpression::eval(Environment& env) const
+{
+    auto result = std::dynamic_pointer_cast<RealExpression>(UnaryExpression::get_expression()->eval(env));
+
+    if (result == nullptr)
+    {
+        throw TypeError{"rtoi applied to non-real"};
+    }
+
+    return std::make_shared<IntExpression>(static_cast<int>(result->get_value()));
+}
+
+std::string RtoIExpression::to_string() const noexcept
+{
+    return "(rtoi" + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+
+
+std::shared_ptr<Expression> ArrayAddExpression::eval(Environment& env) const {
+    auto array_result = get_left_expression()->eval(env);
+    auto element_result = get_right_expression()->eval(env);
+
+    return array_result;
+}
+
+std::string ArrayAddExpression::to_string() const noexcept {
+    return "(add_array " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+
+std::shared_ptr<Expression> ArrayDelExpression::eval(Environment& env) const {
+    auto array_result = get_left_expression()->eval(env);
+    auto index_result = get_right_expression()->eval(env);
+    
+    return array_result;
+}
+
+std::string ArrayDelExpression::to_string() const noexcept {
+    return "(del_array " + 
+           get_left_expression()->to_string() + " " +
+           get_right_expression()->to_string() + ")";
+}
+
+
+
+IfElseExpression::IfElseExpression(std::shared_ptr<Expression> _condition_expression, std::shared_ptr<Expression> _true_expression, std::shared_ptr<Expression> _false_expression) noexcept
+    : condition_expression{_condition_expression}, true_expression{_true_expression}, false_expression{_false_expression}
+{}
+
+std::shared_ptr<Expression> IfElseExpression::get_condition_expression() const noexcept
+{
+    return condition_expression;
+}
+
+std::shared_ptr<Expression> IfElseExpression::get_true_expression() const noexcept
+{
+    return true_expression;
+}
+
+std::shared_ptr<Expression> IfElseExpression::get_false_expression() const noexcept
+{
+    return false_expression;
+}
+    
+std::shared_ptr<Expression> IfElseExpression::eval(Environment& env) const
+{
+    auto condition_result = condition_expression->eval(env);
+    auto condition_bool = std::dynamic_pointer_cast<BoolExpression>(condition_result);
+
+    if (condition_bool == nullptr)
+    {
+        throw TypeError{"ifelse condition must be boolean"};
+    }
+    
+    if (condition_bool->get_value())
+    {
+        return true_expression->eval(env);
+    }
+    else
+    {
+        return false_expression->eval(env);
     }
 }
 
-ASTNodeInterface* IfElseExpression::copy() const noexcept {
-    return new IfElseExpression{
-        dynamic_cast<Expression*>(this->condition->copy()),
-        dynamic_cast<Expression*>(this->true_expression->copy()),
-        this->false_expression == nullptr ? nullptr : dynamic_cast<Expression*>(this->false_expression->copy())
-    };
+std::string IfElseExpression::to_string() const noexcept
+{
+    return "(ifelse "
+        + condition_expression->to_string() + " "
+        + true_expression->to_string() + " "
+        + false_expression->to_string() + ")";
 }
 
-bool IfElseExpression::equal(ASTNodeInterface* other) const noexcept {
-    auto other_expr = dynamic_cast<IfElseExpression*>(other);
-    if (other_expr == nullptr) return false;
+FunExpression::FunExpression(std::shared_ptr<Expression> _function_name_expression, 
+                            std::shared_ptr<Expression> _parameter_name_expression, 
+                            std::shared_ptr<Expression> _body_expression) noexcept
+    : UnaryExpression(_body_expression), 
+      function_name_expression(_function_name_expression), 
+      parameter_name_expression(_parameter_name_expression) {}
+
+std::shared_ptr<Expression> FunExpression::get_function_name_expression() const noexcept {
+    return function_name_expression;
+}
+
+std::shared_ptr<Expression> FunExpression::get_parameter_name_expression() const noexcept {
+    return parameter_name_expression;
+}
+
+const std::string& FunExpression::get_name() const noexcept {
+    auto name_expr = std::dynamic_pointer_cast<NameExpression>(function_name_expression);
+    return name_expr ? name_expr->get_name() : static_cast<const std::string&>("");
+}
+
+const std::string& FunExpression::get_parameter_name() const noexcept {
+    auto param_expr = std::dynamic_pointer_cast<NameExpression>(parameter_name_expression);
+    return param_expr ? param_expr->get_name() : static_cast<const std::string&>("");
+}
+
+std::shared_ptr<Expression> FunExpression::get_body_expression() const noexcept {
+    return UnaryExpression::get_expression();
+}
+
+std::shared_ptr<Expression> FunExpression::eval(Environment& env) const {
+    return std::make_shared<Closure>(env, std::make_shared<FunExpression>(*this));
+}
+
+std::string FunExpression::to_string() const noexcept {
+    return "(fun " + 
+           function_name_expression->to_string() + " " +
+           parameter_name_expression->to_string() + " " +
+           get_body_expression()->to_string() + ")";
+}
+
+LetExpression::LetExpression(std::shared_ptr<Expression> _var_name, 
+                           std::shared_ptr<Expression> _var_expression, 
+                           std::shared_ptr<Expression> _body_expression) noexcept
+    : var_name(_var_name), var_expression(_var_expression), body_expression(_body_expression) {}
+
+std::shared_ptr<Expression> LetExpression::get_var_name() const noexcept {
+    return var_name;
+}
+
+std::shared_ptr<Expression> LetExpression::get_var_expression() const noexcept {
+    return var_expression;
+}
+
+std::shared_ptr<Expression> LetExpression::get_body_expression() const noexcept {
+    return body_expression;
+}
+
+std::shared_ptr<Expression> LetExpression::eval(Environment& env) const {
+    auto var_value = var_expression->eval(env);
+    auto name_expr = std::dynamic_pointer_cast<NameExpression>(var_name);
+    if (!name_expr) {
+        throw std::runtime_error("Let expression requires a variable name");
+    }
     
-    bool cond_equal = this->condition->equal(other_expr->condition);
-    bool true_equal = this->true_expression->equal(other_expr->true_expression);
-    bool false_equal = (this->false_expression == nullptr && other_expr->false_expression == nullptr) ||
-                       (this->false_expression != nullptr && other_expr->false_expression != nullptr &&
-                        this->false_expression->equal(other_expr->false_expression));
+    env.add(name_expr->get_name(), var_value);
     
-    return cond_equal && true_equal && false_equal;
+    return body_expression->eval(env);
 }
 
-std::pair<bool, Datatype*> IfElseExpression::type_check() const noexcept {
-    auto cond_type = this->condition->type_check();
-    if (!cond_type.first || !cond_type.second->is<BooleanDatatype>()) {
-        if (cond_type.second != nullptr) {
-            cond_type.second->destroy();
-            delete cond_type.second;
-        }
-        return std::make_pair(false, nullptr);
-    }
-    cond_type.second->destroy();
-    delete cond_type.second;
-
-    auto true_type = this->true_expression->type_check();
-    if (!true_type.first) {
-        return std::make_pair(false, nullptr);
-    }
-
-    if (this->false_expression == nullptr) {
-        // If without else returns void
-        if (true_type.second != nullptr) {
-            true_type.second->destroy();
-            delete true_type.second;
-        }
-        return std::make_pair(true, new VoidDatatype());
-    }
-
-    auto false_type = this->false_expression->type_check();
-    if (!false_type.first) {
-        if (true_type.second != nullptr) {
-            true_type.second->destroy();
-            delete true_type.second;
-        }
-        return std::make_pair(false, nullptr);
-    }
-
-    // Both branches should have the same type
-    if (!true_type.second->equal(false_type.second)) {
-        true_type.second->destroy();
-        delete true_type.second;
-        false_type.second->destroy();
-        delete false_type.second;
-        return std::make_pair(false, nullptr);
-    }
-
-    false_type.second->destroy();
-    delete false_type.second;
-    return std::make_pair(true, true_type.second);
+std::string LetExpression::to_string() const noexcept {
+    return "(let " + 
+           var_name->to_string() + " " +
+           var_expression->to_string() + " " +
+           body_expression->to_string() + ")";
 }
 
-bool IfElseExpression::resolve_name(SymbolTable& symbol_table) noexcept {
-    bool cond_res = this->condition->resolve_name(symbol_table);
-    bool true_res = this->true_expression->resolve_name(symbol_table);
-    bool false_res = this->false_expression == nullptr ? true : this->false_expression->resolve_name(symbol_table);
-    return cond_res && true_res && false_res;
+std::shared_ptr<Expression> PrintExpression::eval(Environment& env) const {
+    auto result = get_expression()->eval(env);
+    printf("Print: %s\n", result->to_string().c_str());
+    return result;
+}
+
+std::string PrintExpression::to_string() const noexcept {
+    return "(print " + get_expression()->to_string() + ")";
 }
