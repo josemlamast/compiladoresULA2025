@@ -1,0 +1,152 @@
+@@ EJEMPLOS FALSE - Consultas que NO funcionan correctamente
+@@ Desde las más básicas hasta las más complejas
+
+@@ 1. ERRORES DE SINTAXIS BÁSICOS
+@@ Falta punto y coma o token
+5 + 3 2
+5 + 3 +
+
+@@ 2. ERRORES EN COMENTARIOS
+# Este es un comentario incorrecto
+// Este también es incorrecto
+/* Este tampoco funciona */
+
+@@ 3. ERRORES EN ARRAYS
+[5, 2, 8, ]  @@ Coma final
+[, 5, 2, 8]  @@ Coma inicial
+[5 2 8]      @@ Sin comas
+
+@@ 4. ERRORES EN PAIRS
+(5, 2, 8)    @@ Más de 2 elementos
+(5,)         @@ Solo un elemento
+(, 2)        @@ Elemento vacío
+
+@@ 5. ERRORES EN LET
+let x = 5    @@ Sin 'in'
+let x = 5 in @@ Sin 'end'
+let x 5 in x end  @@ Sin '='
+
+@@ 6. ERRORES EN IF
+if (5 > 3) then 10 else 5 end  @@ 'then' no existe
+if 5 > 3 10 else 5 end         @@ Sin paréntesis
+if (5 > 3) 10 else 5           @@ Sin 'end'
+
+@@ 7. ERRORES EN FUNCIONES
+fun test(x) = x end  @@ '=' no se usa
+fun test(x, y) x end  @@ Múltiples parámetros
+fun test() x end     @@ Sin parámetros
+
+@@ 8. ERRORES EN LLAMADAS A FUNCIONES
+test()               @@ Sin argumentos
+test(5, 3)           @@ Múltiples argumentos
+test                 @@ Sin paréntesis
+
+@@ 9. ERRORES EN OPERACIONES DE ARRAYS
+ADD_ARRAY([5], [2, 8])  @@ Sintaxis incorrecta
+[5] + [2, 8]           @@ Operador incorrecto
+[5] # [2, 8]           @@ Operador incorrecto
+
+@@ 10. ERRORES EN CONCATENACIÓN
+<+>([5], [2, 8])      @@ Sintaxis incorrecta
+<+>([5], [2, 8], [3]) @@ Múltiples argumentos
+<+>([5])              @@ Un solo argumento
+
+@@ 11. ERRORES EN ELIMINACIÓN
+<->([5, 2, 8])        @@ Sin índice
+<->([5, 2, 8], 0, 1)  @@ Múltiples índices
+<->([5, 2, 8], "a")   @@ Índice incorrecto
+
+@@ 12. ERRORES EN LET DENTRO DE FUNCIONES
+fun test(x) 
+    let y = 5 in y end
+end
+
+@@ 13. ERRORES EN EXPRESIONES ANIDADAS COMPLEJAS
+<+>(<+>(<+>(empty, [5]), [2]), [8])  @@ Demasiado anidado
+
+@@ 14. ERRORES EN FUNCIONES RECURSIVAS COMPLEJAS
+fun ordenarArray(arr) 
+    if (arr == empty) 
+        empty
+    else
+        <+>(<+>(empty, [head(arr)]), ordenarArray(tail(arr)))
+    end
+end
+
+@@ 15. ERRORES EN COMPARACIONES DE ARRAYS
+[5, 2, 8] > [1, 2, 3]  @@ Comparación directa no soportada
+[5, 2, 8] == [1, 2, 3] @@ Comparación directa no soportada
+
+@@ 16. ERRORES EN OPERACIONES CON TIPOS MIXTOS
+5 + "hola"             @@ Tipos incompatibles
+true + false           @@ Tipos incompatibles
+[5] + "hola"           @@ Tipos incompatibles
+
+@@ 17. ERRORES EN FUNCIONES CON MÚLTIPLES LET
+fun test(x) 
+    let y = 5 in
+    let z = 3 in
+    y + z
+    end
+end
+
+@@ 18. ERRORES EN EXPRESIONES CON PARÉNTESIS INCORRECTOS
+((5 + 3)              @@ Paréntesis no balanceado
+(5 + 3))              @@ Paréntesis no balanceado
+
+@@ 19. ERRORES EN ARRAYS VACÍOS
+[]                     @@ Array vacío sin 'empty'
+[empty]                @@ 'empty' dentro de array
+
+@@ 20. ERRORES EN FUNCIONES CON PARÁMETROS INCORRECTOS
+fun test(x, y) 
+    x + y
+end
+
+@@ 21. ERRORES EN LLAMADAS CON ARGUMENTOS INCORRECTOS
+test(5, 3)             @@ Múltiples argumentos
+test()                  @@ Sin argumentos
+
+@@ 22. ERRORES EN EXPRESIONES CON OPERADORES INCORRECTOS
+5 ** 3                 @@ Operador no soportado
+5 // 3                 @@ Operador no soportado
+5 ^ 3                  @@ Operador no soportado
+
+@@ 23. ERRORES EN STRINGS
+"hola                  @@ String sin cerrar
+'hola'                 @@ Comillas simples no soportadas
+
+@@ 24. ERRORES EN NÚMEROS
+5.5.5                  @@ Punto decimal múltiple
+5e5                    @@ Notación científica no soportada
+0x5                    @@ Hexadecimal no soportado
+
+@@ 25. ERRORES EN BOOLEANOS
+True                   @@ Mayúscula incorrecta
+FALSE                  @@ Mayúscula incorrecta
+null                   @@ Valor nulo no soportado
+
+@@ 26. ERRORES EN FUNCIONES CON RETORNO INCORRECTO
+fun test(x) 
+    if (x > 0) 
+        5
+    else
+        "hola"
+    end
+end
+
+@@ 27. ERRORES EN EXPRESIONES CON TIPOS INCOMPATIBLES
+if (5) 10 else "hola" end  @@ Tipos de retorno incompatibles
+
+@@ 28. ERRORES EN ARRAYS CON TIPOS MIXTOS INCOMPATIBLES
+[5, "hola", true]      @@ Tipos mixtos en array
+
+@@ 29. ERRORES EN FUNCIONES CON RECURSION INFINITA
+fun test(x) 
+    test(x)
+end
+
+@@ 30. ERRORES EN EXPRESIONES CON OPERADORES NO DEFINIDOS
+5 <=> 3                @@ Operador no soportado
+5 === 3                @@ Operador no soportado
+5 !== 3                @@ Operador no soportado

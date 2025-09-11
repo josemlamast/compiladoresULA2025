@@ -1,7 +1,7 @@
 #include "utils.hpp"
 #include "expression.hpp"
-#include "Exceptions.hpp"
 #include <vector>
+#include <stdexcept>
 
 
 
@@ -331,6 +331,8 @@ std::shared_ptr<Expression> EqualExpression::eval(Environment& env) const {
     auto right_bool = std::dynamic_pointer_cast<BoolExpression>(right_result);
     auto left_str = std::dynamic_pointer_cast<StrExpression>(left_result);
     auto right_str = std::dynamic_pointer_cast<StrExpression>(right_result);
+    auto left_array = std::dynamic_pointer_cast<ArrayExpression>(left_result);
+    auto right_array = std::dynamic_pointer_cast<ArrayExpression>(right_result);
     
     if (left_int && right_int) {
         return std::make_shared<BoolExpression>(left_int->get_value() == right_int->get_value());
@@ -349,6 +351,26 @@ std::shared_ptr<Expression> EqualExpression::eval(Environment& env) const {
     }
     else if (left_str && right_str) {
         return std::make_shared<BoolExpression>(left_str->get_value() == right_str->get_value());
+    }
+    else if (left_array && right_array) {
+        // Comparar arrays: deben tener el mismo tamaño y elementos iguales
+        const auto& left_elements = left_array->get_elements();
+        const auto& right_elements = right_array->get_elements();
+        
+        if (left_elements.size() != right_elements.size()) {
+            return std::make_shared<BoolExpression>(false);
+        }
+        
+        for (size_t i = 0; i < left_elements.size(); ++i) {
+            // Comparar elementos recursivamente
+            auto elem_equal = EqualExpression(left_elements[i], right_elements[i]).eval(env);
+            auto elem_bool = std::dynamic_pointer_cast<BoolExpression>(elem_equal);
+            if (!elem_bool || !elem_bool->get_value()) {
+                return std::make_shared<BoolExpression>(false);
+            }
+        }
+        
+        return std::make_shared<BoolExpression>(true);
     }
     
     return std::make_shared<BoolExpression>(false);
@@ -656,7 +678,11 @@ std::shared_ptr<Expression> CallExpression::eval(Environment& env) const
     Environment new_env = closure->get_environment();
     auto function = std::dynamic_pointer_cast<FunExpression>(closure->get_function_expression());
 
-    new_env.add(function->get_parameter_name(), BinaryExpression::get_right_expression()->eval(env));
+    // Evaluar el argumento en el entorno original
+    auto argument_value = BinaryExpression::get_right_expression()->eval(env);
+    
+    // Agregar el parámetro al entorno antes de evaluar el cuerpo
+    new_env.add(function->get_parameter_name(), argument_value);
     new_env.add(function->get_name(), closure);
     
     return function->get_body_expression()->eval(new_env);
@@ -759,7 +785,6 @@ const std::string& NameExpression::get_name() const noexcept {
 }
 
 std::shared_ptr<Expression> NameExpression::eval(Environment& env) const {
-
     auto value = env.lookup(name);
     
     if (value == nullptr) {
@@ -1091,9 +1116,24 @@ std::pair<bool, Datatype> SndExpression::type_check(Environment& env) const noex
 
 std::shared_ptr<Expression> HeadExpression::eval(Environment& env) const
 {
-    auto result = std::dynamic_pointer_cast<PairExpression>(UnaryExpression::get_expression()->eval(env));
-
-    return result->get_left_expression();
+    auto result = UnaryExpression::get_expression()->eval(env);
+    
+    // Verificar si es un ArrayExpression
+    auto array_expr = std::dynamic_pointer_cast<ArrayExpression>(result);
+    if (array_expr) {
+        if (array_expr->get_elements().empty()) {
+            throw std::runtime_error("HeadExpression: Cannot get head of empty array");
+        }
+        return array_expr->get_elements()[0];
+    }
+    
+    // Verificar si es un PairExpression (para compatibilidad)
+    auto pair_expr = std::dynamic_pointer_cast<PairExpression>(result);
+    if (pair_expr) {
+        return pair_expr->get_left_expression();
+    }
+    
+    throw std::runtime_error("HeadExpression: Operand must be an array or pair");
 }
 
 std::string HeadExpression::to_string() const noexcept
@@ -1107,15 +1147,52 @@ std::pair<bool, Datatype> HeadExpression::type_check(Environment& env) const noe
     
     if (!expr_ok) return {false, Datatype::UnknownType};
     
-    // Para simplificar, asumimos que el head de cualquier tipo es int
-    return {true, Datatype::IntType};
+    // Si es un array, devolver el tipo del primer elemento
+    if (expr_type == Datatype::ArrayType || 
+        expr_type == Datatype::IntArrayType || 
+        expr_type == Datatype::RealArrayType || 
+        expr_type == Datatype::StringArrayType || 
+        expr_type == Datatype::BoolArrayType) {
+        // Para simplificar, asumimos que el head de un array es int
+        // En una implementación más completa, se podría inferir el tipo real
+        return {true, Datatype::IntType};
+    }
+    
+    // Si es un par, devolver el tipo del primer elemento
+    if (expr_type == Datatype::PairType) {
+        return {true, Datatype::IntType};
+    }
+    
+    return {false, Datatype::UnknownType};
 }
 
 std::shared_ptr<Expression> TailExpression::eval(Environment& env) const
 {
-    auto result = std::dynamic_pointer_cast<PairExpression>(UnaryExpression::get_expression()->eval(env));
-
-    return result->get_right_expression();
+    auto result = UnaryExpression::get_expression()->eval(env);
+    
+    // Verificar si es un ArrayExpression
+    auto array_expr = std::dynamic_pointer_cast<ArrayExpression>(result);
+    if (array_expr) {
+        if (array_expr->get_elements().empty()) {
+            throw std::runtime_error("TailExpression: Cannot get tail of empty array");
+        }
+        
+        // Crear un nuevo array con todos los elementos excepto el primero
+        std::vector<std::shared_ptr<Expression>> tail_elements;
+        for (size_t i = 1; i < array_expr->get_elements().size(); ++i) {
+            tail_elements.push_back(array_expr->get_elements()[i]);
+        }
+        
+        return std::make_shared<ArrayExpression>(tail_elements);
+    }
+    
+    // Verificar si es un PairExpression (para compatibilidad)
+    auto pair_expr = std::dynamic_pointer_cast<PairExpression>(result);
+    if (pair_expr) {
+        return pair_expr->get_right_expression();
+    }
+    
+    throw std::runtime_error("TailExpression: Operand must be an array or pair");
 }
 
 std::string TailExpression::to_string() const noexcept
@@ -1128,8 +1205,21 @@ std::pair<bool, Datatype> TailExpression::type_check(Environment& env) const noe
     
     if (!expr_ok) return {false, Datatype::UnknownType};
     
-    // Para simplificar, asumimos que cualquier tipo puede ser el tail de un array
-    return {true, expr_type};
+    // Si es un array, devolver el tipo del array (el tail es un array)
+    if (expr_type == Datatype::ArrayType || 
+        expr_type == Datatype::IntArrayType || 
+        expr_type == Datatype::RealArrayType || 
+        expr_type == Datatype::StringArrayType || 
+        expr_type == Datatype::BoolArrayType) {
+        return {true, expr_type};
+    }
+    
+    // Si es un par, devolver el tipo del segundo elemento
+    if (expr_type == Datatype::PairType) {
+        return {true, Datatype::IntType};
+    }
+    
+    return {false, Datatype::UnknownType};
 }
 
 
@@ -1505,14 +1595,17 @@ std::shared_ptr<Expression> LetExpression::get_body_expression() const noexcept 
 
 std::shared_ptr<Expression> LetExpression::eval(Environment& env) const {
     auto var_value = var_expression->eval(env);
+    
     auto name_expr = std::dynamic_pointer_cast<NameExpression>(var_name);
     if (!name_expr) {
         throw std::runtime_error("Let expression requires a variable name");
     }
     
-    env.add(name_expr->get_name(), var_value);
+    // Crear un nuevo entorno local que incluye la variable
+    Environment local_env = env;
+    local_env.add(name_expr->get_name(), var_value);
     
-    return body_expression->eval(env);
+    return body_expression->eval(local_env);
 }
 
 std::string LetExpression::to_string() const noexcept {

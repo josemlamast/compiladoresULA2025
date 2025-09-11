@@ -14,8 +14,9 @@
     extern char* prev_identifier;
     extern char* function_name;
 
-    char* saved_function_name = nullptr;
-    char* saved_call_name = nullptr;
+char* saved_function_name = nullptr;
+char* saved_call_name = nullptr;
+char* saved_param_name = nullptr;
     int yyerror(const char*);
 
     Expression* parser_result{nullptr};
@@ -32,21 +33,7 @@ void set_parser_result(Expression* expr) {
     parser_result = expr;
 }
 
-// Función auxiliar para manejar múltiples declaraciones
-Expression* handle_statements(Expression* prev, Expression* current) {
-    if (prev == nullptr) {
-        return current;
-    }
-    
-    // Si el statement anterior es una función, la agregamos al entorno global
-    if (auto fun_expr = dynamic_cast<FunExpression*>(prev)) {
-        // Por simplicidad, devolvemos solo la expresión actual
-        // En una implementación completa, se manejaría un entorno global
-        return current;
-    }
-    
-    return current;
-}
+
 
 // Entorno global para almacenar funciones
 Environment global_env;
@@ -168,14 +155,14 @@ variable_declaration : TOKEN_LET TOKEN_IDENTIFIER TOKEN_ASIG expr TOKEN_IN expr 
         $$ = new LetExpression(var_name, var_expr, body_expr);
     }
 
-function_declaration : TOKEN_FUN fname_save TOKEN_LPAREN TOKEN_IDENTIFIER TOKEN_RPAREN  expr TOKEN_END
+function_declaration : TOKEN_FUN fname_save TOKEN_LPAREN param_save TOKEN_RPAREN  statement TOKEN_END
     {
-        printf("DEBUG: In function_declaration - saved_function_name='%s', last_identifier='%s'\n", 
+        printf("DEBUG: In function_declaration - saved_function_name='%s', saved_param_name='%s'\n", 
                saved_function_name ? saved_function_name : "NULL", 
-               last_identifier ? last_identifier : "NULL");
+               saved_param_name ? saved_param_name : "NULL");
         
         auto func_name = std::make_shared<NameExpression>(copy_string(saved_function_name));
-        auto param_name = std::make_shared<NameExpression>(copy_string(last_identifier));
+        auto param_name = std::make_shared<NameExpression>(copy_string(saved_param_name));
         auto body_expr = std::shared_ptr<Expression>(dynamic_cast<Expression*>($6));
         $$ = new FunExpression(func_name, param_name, body_expr);
     }
@@ -197,6 +184,15 @@ fcall_save : TOKEN_IDENTIFIER
         saved_call_name = strdup(last_identifier);
         $$ = nullptr; // No necesitamos un valor semántico
     }
+
+param_save : TOKEN_IDENTIFIER
+    {
+        if (saved_param_name != nullptr) {
+            free(saved_param_name);
+        }
+        saved_param_name = strdup(last_identifier);
+        $$ = nullptr; // No necesitamos un valor semántico
+    }
 ;
 
 expr : expr TOKEN_OR and_expr            
@@ -212,7 +208,7 @@ expr : expr TOKEN_OR and_expr
         std::shared_ptr<Expression>($3)
     ); }    
     | and_expr                 
-    | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN expr TOKEN_ELSE expr TOKEN_END
+    | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN statement TOKEN_ELSE statement TOKEN_END
     {
         $$ = new IfElseExpression( 
             std::shared_ptr<Expression>($3), 

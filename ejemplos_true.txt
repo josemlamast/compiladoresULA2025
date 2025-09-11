@@ -1,0 +1,166 @@
+@@ EJEMPLOS TRUE - Consultas que SÍ funcionan correctamente
+@@ Desde las más básicas hasta las más complejas
+
+@@ 1. EXPRESIONES BÁSICAS
+5
+2.5
+"hola"
+true
+false
+
+@@ 2. OPERACIONES ARITMÉTICAS
+5 + 3
+10 - 4
+6 * 2
+8 / 4
+5 % 3
+
+@@ 3. OPERACIONES LÓGICAS
+true and false
+true or false
+true xor false
+not true
+
+@@ 4. COMPARACIONES
+5 > 3
+5 < 3
+5 == 5
+5 != 3
+5 >= 5
+5 <= 3
+
+@@ 5. ARRAYS BÁSICOS
+[]
+[5]
+[5, 2, 8]
+[1, 2, 3, 4, 5]
+
+@@ 6. OPERACIONES CON ARRAYS
+head([5, 2, 8])
+tail([5, 2, 8])
+length([5, 2, 8])
+
+@@ 7. PAIRS BÁSICOS
+(5, 2)
+(5, "hola")
+(true, false)
+
+@@ 8. OPERACIONES CON PAIRS
+fst((5, 2))
+snd((5, 2))
+
+@@ 9. CONCATENACIÓN DE ARRAYS
+<+>(empty, [5])
+<+>([5], [2, 8])
+<+>([1, 2], [3, 4])
+
+@@ 10. ELIMINACIÓN DE ARRAYS
+<->([5, 2, 8], 0)
+<->([5, 2, 8], 1)
+
+@@ 11. LET EXPRESIONES
+let x = 5 in x end
+let x = 5 in x + 3 end
+let x = 5 in let y = 3 in x + y end end
+
+@@ 12. IF EXPRESIONES
+if (5 > 3) 10 else 5 end
+if (true) "verdadero" else "falso" end
+if (false) 1 else 2 end
+
+@@ 13. FUNCIONES BÁSICAS
+fun test(x) x end
+fun test(x) x + 1 end
+fun test(x) head(x) end
+
+@@ 14. LLAMADAS A FUNCIONES
+test(5)
+test([5, 2, 8])
+test((5, 2))
+
+@@ 15. FUNCIONES CON COMPARACIONES
+fun maximo(x) 
+    if (fst(x) > snd(x)) 
+        fst(x)
+    else
+        snd(x)
+    end
+end
+
+maximo((5, 3))
+
+@@ 16. FUNCIONES CON ARRAYS
+fun primerElemento(arr) 
+    head(arr)
+end
+
+primerElemento([5, 2, 8])
+
+@@ 17. FUNCIONES CON PAIRS
+fun sumarPair(pair) 
+    fst(pair) + snd(pair)
+end
+
+sumarPair((5, 3))
+
+@@ 18. FUNCIONES RECURSIVAS SIMPLES
+fun factorial(x) 
+    if (x == 0) 
+        1
+    else
+        x * factorial(x - 1)
+    end
+end
+
+factorial(5)
+
+@@ 19. FUNCIONES CON ARRAYS Y COMPARACIONES
+fun encontrarMaximo(arr) 
+    if (head(arr) > head(tail(arr))) 
+        head(arr)
+    else
+        head(tail(arr))
+    end
+end
+
+encontrarMaximo([5, 8, 2])
+
+@@ 20. EXPRESIONES COMPLEJAS
+let x = 5 in 
+    let y = 3 in 
+        if (x > y) 
+            x + y
+        else
+            x - y
+        end
+    end
+end
+
+@@ 21. ARRAYS CON DIFERENTES TIPOS
+[5, 2.5, "hola", true]
+[(5, 2), (3, 4)]
+[[1, 2], [3, 4]]
+
+@@ 22. OPERACIONES COMPLEJAS CON ARRAYS
+<+>(<+>(empty, [5]), [2, 8])
+<+>([1, 2], <+>([3], [4]))
+
+@@ 23. FUNCIONES CON MÚLTIPLES OPERACIONES
+fun procesarArray(arr) 
+    <+>(empty, [head(arr)])
+end
+
+procesarArray([5, 2, 8, 1, 9, 3])
+
+@@ 24. EXPRESIONES CON PRINT
+print(5)
+print("hola")
+print([5, 2, 8])
+print(true)
+
+@@ 25. FUNCIONES CON PRINT
+fun mostrar(x) 
+    print(x)
+end
+
+mostrar(5)
