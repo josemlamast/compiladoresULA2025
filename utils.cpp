@@ -1,5 +1,6 @@
 #include <sstream>
 #include <utils.hpp>
+#include "expression.hpp"
 
 Expression::~Expression()
 {
@@ -75,8 +76,9 @@ std::string Environment::to_string() const noexcept
     return out.str();
 }
 
-Closure::Closure(const Environment& _env, std::shared_ptr<Expression> _function) noexcept
-    : UnaryExpression{_function}, env{_env}
+Closure::Closure(const Environment& _env, std::shared_ptr<Expression> _function, 
+                 Datatype _param_type, Datatype _return_type) noexcept
+    : UnaryExpression{_function}, env{_env}, parameter_type{_param_type}, return_type{_return_type}
 {
     // empty
 }
@@ -91,9 +93,19 @@ std::shared_ptr<Expression> Closure::get_function_expression() const noexcept
     return UnaryExpression::get_expression();
 }
 
+Datatype Closure::get_parameter_type() const noexcept
+{
+    return parameter_type;
+}
+
+Datatype Closure::get_return_type() const noexcept
+{
+    return return_type;
+}
+
 std::shared_ptr<Expression> Closure::eval(Environment&) const
 {
-    return std::make_shared<Closure>(env, UnaryExpression::get_expression());
+    return std::make_shared<Closure>(env, UnaryExpression::get_expression(), parameter_type, return_type);
 }
 
 std::string Closure::to_string() const noexcept
@@ -101,4 +113,10 @@ std::string Closure::to_string() const noexcept
     return "(closure" 
         + env.to_string()
         + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+std::pair<bool, Datatype> Closure::type_check(Environment&) const noexcept
+{
+    // Un closure es una función, devolvemos FunctionType
+    return {true, Datatype::FunctionType};
 }

@@ -5,7 +5,6 @@
 #include <memory>
 #include "expression.hpp"
 #include "utils.hpp"
-#include "semantic_analyzer.hpp"
 
 extern FILE* yyin;
 extern int yyparse();
@@ -38,6 +37,15 @@ int main(int argc, char* argv[])
     if (parser_result) {
         printf("Parsed expression: %s\n", parser_result->to_string().c_str());
         
+        printf("Type checking...\n");
+        auto [type_ok, type_result] = parser_result->type_check(global_env);
+        if (type_ok) {
+            printf("Type check passed. Type: %s\n", datatype_to_string(type_result).c_str());
+        } else {
+            printf("Type check failed...\n");
+            return 0;
+        }
+        
         try {
             printf("Evaluating expression...\n");
             // Usar el entorno global que contiene las funciones definidas
@@ -46,6 +54,8 @@ int main(int argc, char* argv[])
         } catch (const std::exception& e) {
             printf("Evaluation error: %s\n", e.what());
         }
+        
+       
     } else {
         printf("No expression parsed\n");
     }
