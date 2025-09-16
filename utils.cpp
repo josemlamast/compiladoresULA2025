@@ -39,6 +39,7 @@ void Environment::add(const std::string& identifier, std::shared_ptr<Expression>
     this->push_front(std::make_pair(identifier, expression));
 }
 
+
 std::shared_ptr<Expression> Environment::lookup(const std::string& identifier) const noexcept
 {
     for (const auto& t : *this)
@@ -76,9 +77,10 @@ std::string Environment::to_string() const noexcept
     return out.str();
 }
 
-Closure::Closure(const Environment& _env, std::shared_ptr<Expression> _function, 
+
+Closure::Closure(const Environment& _env, const std::string& _param_name, std::shared_ptr<Expression> _body,
                  Datatype _param_type, Datatype _return_type) noexcept
-    : UnaryExpression{_function}, env{_env}, parameter_type{_param_type}, return_type{_return_type}
+    : env{_env}, param_name{_param_name}, body{_body}, parameter_type{_param_type}, return_type{_return_type}
 {
     // empty
 }
@@ -88,9 +90,14 @@ const Environment& Closure::get_environment() const noexcept
     return env;
 }
 
-std::shared_ptr<Expression> Closure::get_function_expression() const noexcept
+std::string Closure::get_parameter_name() const noexcept
 {
-    return UnaryExpression::get_expression();
+    return param_name;
+}
+
+std::shared_ptr<Expression> Closure::get_body_expression() const noexcept
+{
+    return body;
 }
 
 Datatype Closure::get_parameter_type() const noexcept
@@ -105,14 +112,14 @@ Datatype Closure::get_return_type() const noexcept
 
 std::shared_ptr<Expression> Closure::eval(Environment&) const
 {
-    return std::make_shared<Closure>(env, UnaryExpression::get_expression(), parameter_type, return_type);
+    return std::make_shared<Closure>(env, param_name, body, parameter_type, return_type);
 }
 
 std::string Closure::to_string() const noexcept
 {
     return "(closure" 
         + env.to_string()
-        + UnaryExpression::get_expression()->to_string() + ")";
+        + " " + param_name + " " + body->to_string() + ")";
 }
 
 std::pair<bool, Datatype> Closure::type_check(Environment&) const noexcept

@@ -5,18 +5,24 @@
     #include <stdlib.h>
     #include <string.h>
     #include <memory>
+        #include <iostream>
+
 
     #define YYSTYPE Expression*
 
     extern int yylex();
     extern char* yytext;
     extern char* last_identifier;
-    extern char* prev_identifier;
+    char* let_var_stack[100];
+    int let_var_stack_top = 0;
     extern char* function_name;
 
-char* saved_function_name = nullptr;
-char* saved_call_name = nullptr;
-char* saved_param_name = nullptr;
+    char* saved_function_name = nullptr;
+    char* saved_param_name = nullptr;
+    char* saved_let_var_name = nullptr;
+
+
+
     int yyerror(const char*);
 
     Expression* parser_result{nullptr};
@@ -47,14 +53,69 @@ Expression* create_statement_sequence(Expression* prev, Expression* current) {
         printf("DEBUG: prev is not null\n");
         auto fun_expr = dynamic_cast<FunExpression*>(prev);
         if (fun_expr != nullptr) {
-            printf("DEBUG: Found function declaration\n");
-            // Evaluamos la función para crear un closure y la almacenamos
-            auto closure = fun_expr->eval(global_env);
-            auto name_expr = std::dynamic_pointer_cast<NameExpression>(fun_expr->get_function_name_expression());
-            if (name_expr) {
-                printf("DEBUG: Storing function '%s' in global environment\n", name_expr->get_name().c_str());
-                global_env.add(name_expr->get_name(), closure);
+            printf("DEBUG: Found function declaration in prev\n");
+            // Store the function in the global environment
+            std::string func_name = fun_expr->get_name();
+            
+            // First do type check
+            auto [type_ok, type_result] = fun_expr->type_check(global_env);
+            if (!type_ok) {
+                printf("ERROR: Type check failed for function '%s'\n", func_name.c_str());
+                return current; // Continue with current expression
             }
+            
+            // Create closure directly without evaluating the function
+            // Get parameter name for type inference
+            auto param_name_expr = std::dynamic_pointer_cast<NameExpression>(fun_expr->get_parameter_name_expression());
+            std::string param_name = param_name_expr ? param_name_expr->get_name() : "unknown";
+            
+            // Infer function types (same logic as FunExpression::eval)
+            auto [param_type, return_type] = infer_function_types(
+                fun_expr->get_body_expression(), 
+                param_name, 
+                global_env
+            );
+            
+            // Create closure directly
+            auto closure = std::make_shared<Closure>(global_env, param_name, fun_expr->get_body_expression(),
+                                                    param_type, return_type);
+            global_env.add(func_name, closure);
+            printf("DEBUG: Stored function '%s' as closure in global environment\n", func_name.c_str());
+        }
+    }
+    
+    // Si la expresión actual es una declaración de función, la almacenamos en el entorno global
+    if (current != nullptr) {
+        auto fun_expr = dynamic_cast<FunExpression*>(current);
+        if (fun_expr != nullptr) {
+            printf("DEBUG: Found function declaration in current\n");
+            // Store the function in the global environment
+            std::string func_name = fun_expr->get_name();
+            
+            // First do type check
+            auto [type_ok, type_result] = fun_expr->type_check(global_env);
+            if (!type_ok) {
+                printf("ERROR: Type check failed for function '%s'\n", func_name.c_str());
+                return current; // Continue with current expression
+            }
+            
+            // Create closure directly without evaluating the function
+            // Get parameter name for type inference
+            auto param_name_expr = std::dynamic_pointer_cast<NameExpression>(fun_expr->get_parameter_name_expression());
+            std::string param_name = param_name_expr ? param_name_expr->get_name() : "unknown";
+            
+            // Infer function types (same logic as FunExpression::eval)
+            auto [param_type, return_type] = infer_function_types(
+                fun_expr->get_body_expression(), 
+                param_name, 
+                global_env
+            );
+            
+            // Create closure directly
+            auto closure = std::make_shared<Closure>(global_env, param_name, fun_expr->get_body_expression(),
+                                                    param_type, return_type);
+            global_env.add(func_name, closure);
+            printf("DEBUG: Stored function '%s' as closure in global environment\n", func_name.c_str());
         }
     }
     
@@ -62,7 +123,39 @@ Expression* create_statement_sequence(Expression* prev, Expression* current) {
     return current;
 }
 
+// Functions to manage let variable stack
+void push_let_var(char* var_name) {
+    if (let_var_stack_top < 100) {
+        let_var_stack[let_var_stack_top++] = copy_string(var_name);
+    }
+}
+
+char* pop_let_var() {
+    if (let_var_stack_top > 0) {
+        return let_var_stack[--let_var_stack_top];
+    }
+    return nullptr;
+}
+
+char* peek_let_var() {
+    if (let_var_stack_top > 0) {
+        return let_var_stack[let_var_stack_top - 1];
+    }
+    return nullptr;
+}
+
 %}
+
+%left TOKEN_OR
+%left TOKEN_XOR
+%left TOKEN_AND
+%left TOKEN_EQUAL TOKEN_NOTEQUAL
+%left TOKEN_LESS TOKEN_GREAT TOKEN_LESSEQL TOKEN_GREATEQL
+%left TOKEN_CONCAT
+%left TOKEN_ADD TOKEN_SUBSTRACT
+%left TOKEN_MULTIPLY TOKEN_DIVIDE TOKEN_MOD
+%right TOKEN_NOT
+%right TOKEN_LPAREN TOKEN_RPAREN
 
 %token TOKEN_EOF
 %token TOKEN_IF
@@ -147,12 +240,21 @@ statement : function_declaration
     | expr { $$ = $1; }
     ;
 
-variable_declaration : TOKEN_LET TOKEN_IDENTIFIER TOKEN_ASIG expr TOKEN_IN expr TOKEN_END
+variable_declaration : TOKEN_LET let_var_save TOKEN_ASIG expr TOKEN_IN expr TOKEN_END
     {
-        auto var_name = std::make_shared<NameExpression>(copy_string(last_identifier));
+        char* let_var = pop_let_var();
+        std::cout << "Let variable: " << (let_var ? let_var : "NULL") << std::endl;
+        
+        // Use the let variable from the stack
+        auto var_name = std::make_shared<NameExpression>(copy_string(let_var));
         auto var_expr = std::shared_ptr<Expression>($4);
         auto body_expr = std::shared_ptr<Expression>($6);
         $$ = new LetExpression(var_name, var_expr, body_expr);
+        
+        // Free the popped variable name
+        if (let_var) {
+            free(let_var);
+        }
     }
 
 function_declaration : TOKEN_FUN fname_save TOKEN_LPAREN param_save TOKEN_RPAREN  statement TOKEN_END
@@ -173,17 +275,10 @@ fname_save : TOKEN_IDENTIFIER
             free(saved_function_name);
         }
         saved_function_name = strdup(last_identifier);
+        printf("DEBUG: fname_save - saved_function_name='%s'\n", saved_function_name);
         $$ = nullptr; // No necesitamos un valor semántico
     }
 
-fcall_save : TOKEN_IDENTIFIER
-    {
-        if (saved_call_name != nullptr) {
-            free(saved_call_name);
-        }
-        saved_call_name = strdup(last_identifier);
-        $$ = nullptr; // No necesitamos un valor semántico
-    }
 
 param_save : TOKEN_IDENTIFIER
     {
@@ -191,9 +286,20 @@ param_save : TOKEN_IDENTIFIER
             free(saved_param_name);
         }
         saved_param_name = strdup(last_identifier);
+        printf("DEBUG: param_save - saved_param_name='%s'\n", saved_param_name);
         $$ = nullptr; // No necesitamos un valor semántico
     }
-;
+
+let_var_save : TOKEN_IDENTIFIER
+    {
+        if (saved_let_var_name != nullptr) {
+            free(saved_let_var_name);
+        }
+        saved_let_var_name = strdup(last_identifier);
+        push_let_var(last_identifier);
+        $$ = nullptr; // No necesitamos un valor semántico
+    }
+
 
 expr : expr TOKEN_OR and_expr            
     {
@@ -215,7 +321,8 @@ expr : expr TOKEN_OR and_expr
             std::shared_ptr<Expression>($5), 
             std::shared_ptr<Expression>($7)
         );
-    }                   
+    }
+    | variable_declaration { $$ = $1; }                   
      ;
 
 
@@ -328,11 +435,52 @@ unary_expr : TOKEN_NOT unary_expr
 
 primary_expr : TOKEN_LPAREN expr TOKEN_RPAREN   { $$ = $2; }     
              | literal                                 
-             | function_call                           
+             | identifier
+             | function_call
              | TOKEN_PRINT TOKEN_LPAREN expr TOKEN_RPAREN 
                 { $$ = new PrintExpression(std::shared_ptr<Expression>($3)); }
-             | TOKEN_IDENTIFIER    { $$ = new NameExpression(copy_string(last_identifier)); }                      
              ;
+
+identifier : TOKEN_IDENTIFIER
+                    { 
+                        $$ = new NameExpression(copy_string(last_identifier)); 
+                    }
+
+function_call : TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
+                    { 
+                        std::cout << "DEBUG: Parsing function call - function name: " << function_name << std::endl;
+                        auto func_name = std::make_shared<NameExpression>(copy_string(function_name));
+                        $$ = new CallExpression(func_name, std::shared_ptr<Expression>($3));
+                    }
+                  | TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN     
+                    { $$ = new FstExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_SND TOKEN_LPAREN expr TOKEN_RPAREN  
+                    { $$ = new SndExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_RTOS TOKEN_LPAREN expr TOKEN_RPAREN   
+                    { $$ = new RtoSExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_ETOS TOKEN_LPAREN expr TOKEN_RPAREN   
+                    { $$ = new ItoSExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_ETOR TOKEN_LPAREN expr TOKEN_RPAREN   
+                    { $$ = new ItoRExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   
+                    { $$ = new RtoIExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
+                    { $$ = new HeadExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN
+                    { $$ = new TailExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_ADD_ARRAY TOKEN_LPAREN array_literal TOKEN_COMA expr TOKEN_RPAREN 
+                    {
+                        $$ = new ArrayAddExpression(
+                        std::shared_ptr<Expression>($3), 
+                        std::shared_ptr<Expression>($5)
+                    ); } 
+                  | TOKEN_DEL_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN 
+                       {
+                        $$ = new ArrayDelExpression(
+                        std::shared_ptr<Expression>($3), 
+                        std::shared_ptr<Expression>($5)
+                    ); } 
+                  ;
 
 literal : TOKEN_INT    
             { $$ = new IntExpression(atoi(yytext)); }                                
@@ -391,42 +539,6 @@ elements : elements TOKEN_COMA expr
             }
          ;
 
-function_call :  TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN     
-                { $$ = new FstExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_SND TOKEN_LPAREN expr TOKEN_RPAREN  
-                { $$ = new SndExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_RTOS TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new RtoSExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_ETOS TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new ItoSExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_ETOR TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new ItoRExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   
-                { $$ = new RtoIExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new HeadExpression(std::shared_ptr<Expression>($3)); } 
-            | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN
-                { $$ = new TailExpression(std::shared_ptr<Expression>($3)); } 
-            | fcall_save TOKEN_LPAREN expr TOKEN_RPAREN
-                { 
-                    // Usar el nombre de la función guardado
-                    auto func_name = std::make_shared<NameExpression>(copy_string(saved_call_name));
-                    $$ = new CallExpression(func_name, std::shared_ptr<Expression>($3));
-                }
-            | TOKEN_ADD_ARRAY TOKEN_LPAREN array_literal TOKEN_COMA expr TOKEN_RPAREN 
-                {
-                    $$ = new ArrayAddExpression(
-                    std::shared_ptr<Expression>($3), 
-                    std::shared_ptr<Expression>($5)
-                ); } 
-            | TOKEN_DEL_ARRAY TOKEN_LPAREN expr TOKEN_COMA expr TOKEN_RPAREN 
-                 {
-                    $$ = new ArrayDelExpression(
-                    std::shared_ptr<Expression>($3), 
-                    std::shared_ptr<Expression>($5)
-                ); } 
-           
-              ;
 
 
 %% /* ---------- user code ---------- */

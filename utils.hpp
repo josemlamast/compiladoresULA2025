@@ -68,15 +68,16 @@ public:
 
 
 
-class Closure : public UnaryExpression
+class Closure : public Expression
 {
 public:
-    Closure(const Environment& _env, std::shared_ptr<Expression> _function, 
+    Closure(const Environment& _env, const std::string& _param_name, std::shared_ptr<Expression> _body,
             Datatype _param_type, Datatype _return_type) noexcept;
 
     const Environment& get_environment() const noexcept;
 
-    std::shared_ptr<Expression> get_function_expression() const noexcept;
+    std::string get_parameter_name() const noexcept;
+    std::shared_ptr<Expression> get_body_expression() const noexcept;
     
     Datatype get_parameter_type() const noexcept;
     Datatype get_return_type() const noexcept;
@@ -89,6 +90,8 @@ public:
 
 private:
     Environment env;
+    std::string param_name;
+    std::shared_ptr<Expression> body;
     Datatype parameter_type;
     Datatype return_type;
 };

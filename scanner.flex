@@ -5,13 +5,10 @@
 #include <stdio.h>
 
 
-char* last_identifier = nullptr;
-char* prev_identifier = nullptr;
 char* function_name = nullptr;
+char* last_identifier = nullptr;
 
 int let_context = 0;
-char* let_var_stack[100];
-int let_var_top = 0;
 %}
 
 SPACE      [ \t\n]
@@ -53,10 +50,16 @@ NARRAY (<{DIGIT}+>)
 "or" { return TOKEN_OR; }
 "not" { return TOKEN_NOT; }
 "xor" { return TOKEN_XOR; }
-"let" { return TOKEN_LET; }
+"let" { 
+    let_context = 1; 
+    return TOKEN_LET; 
+}
 "true" { return TOKEN_TRUE; }
 "false" { return TOKEN_FALSE; }
-"in" { return TOKEN_IN; }
+"in" { 
+    let_context = 0; 
+    return TOKEN_IN; 
+}
 "fun" { return TOKEN_FUN; }
 "print" { return TOKEN_PRINT; }
 "fst" { return TOKEN_FST; }
@@ -77,16 +80,24 @@ NARRAY (<{DIGIT}+>)
 {COMMENT} {/*ignorar*/}
 
 {IDENTIFIER} {
-     if (let_context == 1) {
-        if (let_var_top < 100) {
-            let_var_stack[let_var_top++] = strdup(yytext);
-        }
+    printf("DEBUG: Lexer found identifier: '%s'\n", yytext);
+    if (last_identifier != nullptr) {
+        free(last_identifier);
     }
-    if (prev_identifier != nullptr) {
-        free(prev_identifier);
-    }
-    prev_identifier = last_identifier;
     last_identifier = strdup(yytext);
+    
+    // Check if this is followed by a parenthesis (function call)
+    int c = yyinput();
+    if (c == '(') {
+        // This is a function call, save the function name
+        if (function_name != nullptr) {
+            free(function_name);
+        }
+        function_name = strdup(yytext);
+        unput(c); // Put back the '('
+    } else {
+        unput(c); // Put back the character
+    }
     return TOKEN_IDENTIFIER;
 }
 {TEXT}       { return TOKEN_STRING; }

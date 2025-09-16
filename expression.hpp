@@ -22,10 +22,11 @@ enum class Datatype {
 };
 
 // Funciones auxiliares para el sistema de tipos
-std::string datatype_to_string(Datatype type) noexcept;
-bool is_compatible_with(Datatype type1, Datatype type2) noexcept;
 Datatype get_base_type(std::shared_ptr<Expression> expr, Environment& env);
 Datatype get_array_type(Datatype base_type) noexcept;
+std::pair<Datatype, Datatype> infer_function_types(std::shared_ptr<Expression> body, 
+                                                  std::string param_name, 
+                                                  Environment& env);
 
 
 
@@ -436,27 +437,6 @@ public:
     std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
 };
 
-class ArrayAddExpression : public BinaryExpression {
-public:
-   using BinaryExpression::BinaryExpression;
-
-    std::shared_ptr<Expression> eval(Environment& env) const override;
-
-    std::string to_string() const noexcept override;
-    
-    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
-};
-
-class ArrayDelExpression : public BinaryExpression {
-public:
-    using BinaryExpression::BinaryExpression;
-
-    std::shared_ptr<Expression> eval(Environment& env) const override;
-
-    std::string to_string() const noexcept override;
-    
-    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
-};
 
 class IfElseExpression : public Expression {
 public:
@@ -553,4 +533,26 @@ public:
 
 private:
     std::vector<std::shared_ptr<Expression>> elements;
+};
+
+class ArrayAddExpression : public BinaryExpression {
+public:
+   using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
+    
+    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
+};
+
+class ArrayDelExpression : public BinaryExpression {
+public:
+    using BinaryExpression::BinaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
+    
+    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
 };
