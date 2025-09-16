@@ -556,3 +556,42 @@ public:
     
     std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
 };
+
+class LengthExpression : public UnaryExpression {
+public:
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
+    
+    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
+};
+
+
+
+class UnitExpression : public UnaryExpression
+{
+public:
+    using UnaryExpression::UnaryExpression;
+
+    std::shared_ptr<Expression> eval(Environment&) const override;
+
+    std::string to_string() const noexcept override;
+
+    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
+};
+
+
+class IsUniTExpression : public UnaryExpression
+{
+public:
+    using UnaryExpression::UnaryExpression;
+
+   
+    std::shared_ptr<Expression> eval(Environment& env) const override;
+
+    std::string to_string() const noexcept override;
+
+    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
+};

@@ -170,6 +170,9 @@ char* peek_let_var() {
 %token TOKEN_EMPTY
 %token TOKEN_HEAD
 %token TOKEN_TAIL
+%token TOKEN_LENGTH
+%token TOKEN_ISUNIT
+%token TOKEN_UNIT
     
 %token TOKEN_ASIG 
 %token TOKEN_ADD
@@ -464,10 +467,16 @@ function_call : TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
                     { $$ = new ItoRExpression(std::shared_ptr<Expression>($3)); } 
                   | TOKEN_RTOE TOKEN_LPAREN expr TOKEN_RPAREN   
                     { $$ = new RtoIExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_ISUNIT TOKEN_LPAREN expr TOKEN_RPAREN   
+                    { $$ = new IsUniTExpression(std::shared_ptr<Expression>($3)); } 
+                  | TOKEN_UNIT TOKEN_LPAREN expr TOKEN_RPAREN   
+                    { $$ = new UnitExpression(std::shared_ptr<Expression>($3)); } 
                   | TOKEN_HEAD TOKEN_LPAREN expr TOKEN_RPAREN
                     { $$ = new HeadExpression(std::shared_ptr<Expression>($3)); } 
                   | TOKEN_TAIL TOKEN_LPAREN expr TOKEN_RPAREN
-                    { $$ = new TailExpression(std::shared_ptr<Expression>($3)); } 
+                    { $$ = new TailExpression(std::shared_ptr<Expression>($3)); }
+                  | TOKEN_LENGTH TOKEN_LPAREN expr TOKEN_RPAREN
+                    { $$ = new LengthExpression(std::shared_ptr<Expression>($3)); } 
                   | TOKEN_ADD_ARRAY TOKEN_LPAREN array_literal TOKEN_COMA expr TOKEN_RPAREN 
                     {
                         $$ = new ArrayAddExpression(

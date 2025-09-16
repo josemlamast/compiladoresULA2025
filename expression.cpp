@@ -403,6 +403,12 @@ std::shared_ptr<Expression> AddExpression::eval(Environment& env) const
    auto left_int = std::dynamic_pointer_cast<IntExpression>(left);
    auto right_int = std::dynamic_pointer_cast<IntExpression>(right);
 
+
+   auto left_real = std::dynamic_pointer_cast<RealExpression>(left);
+   auto right_real = std::dynamic_pointer_cast<RealExpression>(right);
+
+
+   
     if(left_int && right_int) {
         return std::make_shared<IntExpression>(left_int->get_value() + right_int->get_value());
     }
@@ -670,6 +676,23 @@ std::pair<bool, Datatype> NameExpression::type_check(Environment& env) const noe
                 auto bool_expr = std::dynamic_pointer_cast<BoolExpression>(expr);
                 if (bool_expr) {
                     return {true, Datatype::BoolType};
+                }
+                auto array_expr = std::dynamic_pointer_cast<ArrayExpression>(expr);
+                if (array_expr) {
+                    // Para arrays, determinar el tipo específico basándose en los elementos
+                    if (array_expr->get_elements().empty()) {
+                        return {true, Datatype::ArrayType}; // Array vacío
+                    }
+                    // Si tiene elementos, determinar el tipo del primer elemento
+                    auto [first_ok, first_type] = array_expr->get_elements()[0]->type_check(env);
+                    if (first_ok) {
+                        return {true, get_array_type(first_type)};
+                    }
+                    return {true, Datatype::ArrayType}; // Fallback
+                }
+                auto pair_expr = std::dynamic_pointer_cast<PairExpression>(expr);
+                if (pair_expr) {
+                    return {true, Datatype::PairType};
                 }
                 // Si no se puede determinar el tipo, asumir int
                 return {true, Datatype::IntType};
@@ -995,7 +1018,19 @@ std::pair<bool, Datatype> HeadExpression::type_check(Environment& env) const noe
         expr_type == Datatype::RealArrayType || 
         expr_type == Datatype::StringArrayType || 
         expr_type == Datatype::BoolArrayType) {
-        return {true, expr_type};
+        // Determinar el tipo base del array
+        switch (expr_type) {
+            case Datatype::IntArrayType:
+                return {true, Datatype::IntType};
+            case Datatype::RealArrayType:
+                return {true, Datatype::RealType};
+            case Datatype::StringArrayType:
+                return {true, Datatype::StringType};
+            case Datatype::BoolArrayType:
+                return {true, Datatype::BoolType};
+            default:
+                return {true, Datatype::IntType}; // Fallback para ArrayType genérico
+        }
     }
         
     return {false, Datatype::UnknownType};
@@ -1342,8 +1377,6 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
 {     
     auto [arg_ok, arg_type] = get_right_expression()->type_check(env);
     
-
-    printf("DEBUG: CallExpression::type_check - argument type: %s\n", datatype_to_string(arg_type).c_str());
     if (!arg_ok) return {false, Datatype::UnknownType};
 
     auto func_name_expr = std::dynamic_pointer_cast<NameExpression>(get_left_expression());
@@ -1393,6 +1426,19 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
         case Datatype::BoolType:
             param_placeholder = std::make_shared<BoolExpression>(false);
             break;
+        case Datatype::ArrayType:
+        case Datatype::IntArrayType:
+        case Datatype::RealArrayType:
+        case Datatype::StringArrayType:
+        case Datatype::BoolArrayType:
+            param_placeholder = std::make_shared<ArrayExpression>(std::vector<std::shared_ptr<Expression>>());
+            break;
+        case Datatype::PairType:
+            param_placeholder = std::make_shared<PairExpression>(
+                std::make_shared<IntExpression>(0),
+                std::make_shared<IntExpression>(0)
+            );
+            break;
         default:
             return {false, Datatype::UnknownType}; // Tipo no soportado
     }
@@ -1402,8 +1448,37 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
     // SOLUCIÓN PARA FUNCIONES RECURSIVAS:
     // Crear un placeholder especial que evite la recursión infinita
     // El placeholder debe ser un Closure que retorne el tipo esperado
+    Datatype return_type = arg_type; // Por defecto, asumir que retorna el mismo tipo
+    
+    // Para funciones que trabajan con arrays, el tipo de retorno podría ser diferente
+    if (arg_type == Datatype::ArrayType || 
+        arg_type == Datatype::IntArrayType || 
+        arg_type == Datatype::RealArrayType || 
+        arg_type == Datatype::StringArrayType || 
+        arg_type == Datatype::BoolArrayType) {
+        // Para funciones que trabajan con arrays, determinar el tipo de retorno
+        // basándose en el tipo base del array
+        switch (arg_type) {
+            case Datatype::IntArrayType:
+                return_type = Datatype::IntType;
+                break;
+            case Datatype::RealArrayType:
+                return_type = Datatype::RealType;
+                break;
+            case Datatype::StringArrayType:
+                return_type = Datatype::StringType;
+                break;
+            case Datatype::BoolArrayType:
+                return_type = Datatype::BoolType;
+                break;
+            default:
+                return_type = Datatype::IntType; // Default para ArrayType genérico
+                break;
+        }
+    }
+    
     std::shared_ptr<Expression> recursive_body;
-    switch (arg_type) {
+    switch (return_type) {
         case Datatype::IntType:
             recursive_body = std::make_shared<IntExpression>(0);
             break;
@@ -1416,6 +1491,19 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
         case Datatype::BoolType:
             recursive_body = std::make_shared<BoolExpression>(false);
             break;
+        case Datatype::ArrayType:
+        case Datatype::IntArrayType:
+        case Datatype::RealArrayType:
+        case Datatype::StringArrayType:
+        case Datatype::BoolArrayType:
+            recursive_body = std::make_shared<ArrayExpression>(std::vector<std::shared_ptr<Expression>>());
+            break;
+        case Datatype::PairType:
+            recursive_body = std::make_shared<PairExpression>(
+                std::make_shared<IntExpression>(0),
+                std::make_shared<IntExpression>(0)
+            );
+            break;
         default:
             recursive_body = std::make_shared<IntExpression>(0); // Default fallback
     }
@@ -1426,7 +1514,7 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
         param_name, 
         recursive_body,
         arg_type,  // param_type
-        arg_type   // return_type
+        return_type   // return_type
     );
     temp_env.add(func_name, recursive_closure);
     
@@ -1439,9 +1527,8 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
         return {false, Datatype::UnknownType}; // El body tiene errores de tipo
     }
     
-    // Para funciones recursivas simples como factorial, asumir que el tipo de retorno
-    // es el mismo que el tipo del argumento
-    return {true, arg_type};
+    // Retornar el tipo inferido para la función
+    return {true, return_type};
 }
 
 
@@ -1499,6 +1586,8 @@ std::pair<bool, Datatype> LetExpression::type_check(Environment& env) const noex
     if (var_name_expr) {
         // Crear un placeholder con el tipo correcto
         std::shared_ptr<Expression> placeholder;
+        std::vector<std::shared_ptr<Expression>> placeholder_elements;
+        
         switch (var_type) {
             case Datatype::IntType:
                 placeholder = std::make_shared<IntExpression>(0);
@@ -1511,6 +1600,38 @@ std::pair<bool, Datatype> LetExpression::type_check(Environment& env) const noex
                 break;
             case Datatype::BoolType:
                 placeholder = std::make_shared<BoolExpression>(false);
+                break;
+            case Datatype::ArrayType:
+            case Datatype::IntArrayType:
+            case Datatype::RealArrayType:
+            case Datatype::StringArrayType:
+            case Datatype::BoolArrayType:
+                // Crear un array placeholder con elementos del tipo correcto
+                switch (var_type) {
+                    case Datatype::IntArrayType:
+                        placeholder_elements.push_back(std::make_shared<IntExpression>(0));
+                        break;
+                    case Datatype::RealArrayType:
+                        placeholder_elements.push_back(std::make_shared<RealExpression>(0.0));
+                        break;
+                    case Datatype::StringArrayType:
+                        placeholder_elements.push_back(std::make_shared<StrExpression>(""));
+                        break;
+                    case Datatype::BoolArrayType:
+                        placeholder_elements.push_back(std::make_shared<BoolExpression>(false));
+                        break;
+                    default:
+                        // Para ArrayType genérico, usar int como fallback
+                        placeholder_elements.push_back(std::make_shared<IntExpression>(0));
+                        break;
+                }
+                placeholder = std::make_shared<ArrayExpression>(placeholder_elements);
+                break;
+            case Datatype::PairType:
+                placeholder = std::make_shared<PairExpression>(
+                    std::make_shared<IntExpression>(0),
+                    std::make_shared<IntExpression>(0)
+                );
                 break;
             default:
                 placeholder = std::make_shared<IntExpression>(0); // fallback
@@ -1761,6 +1882,93 @@ std::pair<bool, Datatype> ArrayDelExpression::type_check(Environment& env) const
     return {true, array_type};
 }
 
+// Implementación de LengthExpression
+std::shared_ptr<Expression> LengthExpression::eval(Environment& env) const {
+    auto result = get_expression()->eval(env);
+    
+    // Verificar si es un ArrayExpression
+    auto array_expr = std::dynamic_pointer_cast<ArrayExpression>(result);
+    if (array_expr) {
+        int length = static_cast<int>(array_expr->get_elements().size());
+        return std::make_shared<IntExpression>(length);
+    }
+    
+    throw std::runtime_error("LengthExpression: Operand must be an array");
+}
+
+std::string LengthExpression::to_string() const noexcept {
+    return "(length " + get_expression()->to_string() + ")";
+}
+
+std::pair<bool, Datatype> LengthExpression::type_check(Environment& env) const noexcept {
+    auto [expr_ok, expr_type] = get_expression()->type_check(env);
+    
+    if (!expr_ok) return {false, Datatype::UnknownType};
+    
+    // Verificar que el operando sea un array
+    if (expr_type == Datatype::ArrayType || 
+        expr_type == Datatype::IntArrayType || 
+        expr_type == Datatype::RealArrayType || 
+        expr_type == Datatype::StringArrayType || 
+        expr_type == Datatype::BoolArrayType) {
+        return {true, Datatype::IntType}; // length siempre retorna un entero
+    }
+    
+    return {false, Datatype::UnknownType};
+}
+
+
+
+
+
+std::shared_ptr<Expression> UnitExpression::eval(Environment& env) const
+{
+    return std::dynamic_pointer_cast<UnitExpression>(UnaryExpression::get_expression()->eval(env)) == nullptr
+            ? std::make_shared<IntExpression>(0)
+            : std::make_shared<IntExpression>(1);
+}
+
+std::string UnitExpression::to_string() const noexcept
+{
+    return "(unit " + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+std::pair<bool, Datatype> UnitExpression::type_check(Environment& env) const noexcept
+{
+    // Check if the inner expression is valid
+    auto [expr_ok, expr_type] = UnaryExpression::get_expression()->type_check(env);
+    if (!expr_ok) return {false, Datatype::UnknownType};
+    
+    return {true, Datatype::IntType}; // unit always returns an integer
+}
+
+
+
+std::shared_ptr<Expression> IsUniTExpression::eval(Environment& env) const
+{
+    auto result = UnaryExpression::get_expression()->eval(env);
+    
+    // Check if the result is an IntExpression with value 0 (unit value)
+    if (auto int_expr = std::dynamic_pointer_cast<IntExpression>(result)) {
+        return std::make_shared<IntExpression>(int_expr->get_value() == 0 ? 1 : 0);
+    }
+    
+    return std::make_shared<IntExpression>(0); // Not a unit value
+}
+
+std::string IsUniTExpression::to_string() const noexcept
+{
+    return "(isunit " + UnaryExpression::get_expression()->to_string() + ")";
+}
+
+std::pair<bool, Datatype> IsUniTExpression::type_check(Environment& env) const noexcept
+{
+    // Check if the inner expression is valid
+    auto [expr_ok, expr_type] = UnaryExpression::get_expression()->type_check(env);
+    if (!expr_ok) return {false, Datatype::UnknownType};
+    
+    return {true, Datatype::IntType}; // isunit always returns an integer (0 or 1)
+}
 
 /*
 

@@ -29,6 +29,8 @@ NARRAY (<{DIGIT}+>)
 "itos"  { return TOKEN_ETOS; }
 "itor"  { return TOKEN_ETOR; }
 "rtoi"  { return TOKEN_RTOE; }
+"isunit"  { return TOKEN_ISUNIT; }
+"unit"  { return TOKEN_UNIT; }
 "(" { return TOKEN_LPAREN; }
 ")" { return TOKEN_RPAREN; }
 "[" { return TOKEN_LCORCH; }
@@ -38,6 +40,7 @@ NARRAY (<{DIGIT}+>)
 "empty" { return TOKEN_EMPTY; }
 "head" { return TOKEN_HEAD; }
 "tail" { return TOKEN_TAIL; }  //resto de la lista sin el
+"length" { return TOKEN_LENGTH; }
 "=" { return TOKEN_ASIG; }//cambiar a asignacion
 {REAL} { return TOKEN_REAL; }
 {INT} { return TOKEN_INT; }
@@ -80,7 +83,6 @@ NARRAY (<{DIGIT}+>)
 {COMMENT} {/*ignorar*/}
 
 {IDENTIFIER} {
-    printf("DEBUG: Lexer found identifier: '%s'\n", yytext);
     if (last_identifier != nullptr) {
         free(last_identifier);
     }
