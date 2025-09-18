@@ -105,7 +105,6 @@ NARRAY (<{DIGIT}+>)
 {TEXT}       { return TOKEN_STRING; }
 
 . {
-    printf("caracter no reconocido %s", yytext);
     return TOKEN_UNKNOWN;}
 
 %%

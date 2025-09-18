@@ -21,13 +21,12 @@ enum class Datatype {
     UnknownType      // Tipo desconocido/error
 };
 
+
 // Funciones auxiliares para el sistema de tipos
-Datatype get_base_type(std::shared_ptr<Expression> expr, Environment& env);
 Datatype get_array_type(Datatype base_type) noexcept;
 std::pair<Datatype, Datatype> infer_function_types(std::shared_ptr<Expression> body, 
                                                   std::string param_name, 
                                                   Environment& env);
-
 
 
 
@@ -148,6 +147,9 @@ public:
     std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
 };
 
+
+
+
 class LessExpression : public BinaryExpression {
 public:
     using BinaryExpression::BinaryExpression;
@@ -247,16 +249,7 @@ public:
     std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
 };
 
-class CallExpression : public BinaryExpression {
-public:
-    using BinaryExpression::BinaryExpression;
 
-    std::shared_ptr<Expression> eval(Environment& env) const override;
-
-    std::string to_string() const noexcept override;
-    
-    std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
-};
 
 class AssignmentExpression : public BinaryExpression {
 public:
@@ -349,6 +342,8 @@ private:
     std::string name;
 };
 
+
+
 class PairExpression : public BinaryExpression {
 public:
     using BinaryExpression::BinaryExpression;
@@ -381,6 +376,8 @@ public:
     
     std::pair<bool, Datatype> type_check(Environment& env) const noexcept override;
 };
+
+
 
 class RtoSExpression : public UnaryExpression {
 public:
@@ -486,7 +483,19 @@ private:
     std::shared_ptr<Expression> body_expression;
 };
 
-class LetExpression : public Expression {
+class CallExpression : public BinaryExpression {
+    public:
+        using BinaryExpression::BinaryExpression;
+    
+        std::shared_ptr<Expression> eval(Environment& env) const override;
+    
+        std::string to_string() const noexcept override;
+        
+        std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
+    };
+    
+
+    class LetExpression : public Expression {
 public:
     LetExpression(std::shared_ptr<Expression> _var_name, std::shared_ptr<Expression> _var_expression, std::shared_ptr<Expression> _body_expression) noexcept;
 
@@ -595,3 +604,6 @@ public:
 
     std::pair<bool, Datatype> type_check(Environment&) const noexcept override;
 };
+
+// Función auxiliar para inferir tipos de expresiones anidadas
+

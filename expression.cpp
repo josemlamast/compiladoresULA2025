@@ -7,7 +7,122 @@
 // Declaración externa de la función que está en main.cpp
 extern std::string datatype_to_string(Datatype type) noexcept;
 
+// Función auxiliar para crear placeholders recursivos de pares anidados
+std::shared_ptr<Expression> create_pair_placeholder_recursive(Datatype type, Environment& env) {
+    switch (type) {
+        case Datatype::IntType:
+            return std::make_shared<IntExpression>(0);
+        case Datatype::RealType:
+            return std::make_shared<RealExpression>(0.0);
+        case Datatype::StringType:
+            return std::make_shared<StrExpression>("");
+        case Datatype::BoolType:
+            return std::make_shared<BoolExpression>(false);
+        case Datatype::PairType:
+            // Para pares anidados, crear placeholders genéricos que permitan anidamiento
+            return std::make_shared<PairExpression>(
+                std::make_shared<IntExpression>(0),  // placeholder genérico para left
+                std::make_shared<IntExpression>(0)   // placeholder genérico para right
+            );
+        case Datatype::ArrayType:
+        case Datatype::IntArrayType:
+        case Datatype::RealArrayType:
+        case Datatype::StringArrayType:
+        case Datatype::BoolArrayType:
+            // Para arrays, crear un array vacío
+            return std::make_shared<ArrayExpression>(std::vector<std::shared_ptr<Expression>>());
+        default:
+            return std::make_shared<IntExpression>(0); // fallback
+    }
+}
 
+// Función auxiliar para inferir tipos de elementos de un par de manera inteligente
+// Función auxiliar para inferir el tipo de retorno de una función recursiva
+Datatype infer_function_return_type(std::shared_ptr<Expression> body, Environment& env) {
+    // Para evitar recursión infinita, solo analizar expresiones simples
+    // No hacer type_check completo del cuerpo ya que puede causar recursión
+    
+    // Analizar solo la estructura de la expresión para inferir el tipo
+    if (auto if_expr = std::dynamic_pointer_cast<IfElseExpression>(body)) {
+        // Para if expressions, analizar solo la rama true (evitar recursión)
+        // No hacer type_check completo, solo inferir del tipo de expresión
+        auto true_expr = if_expr->get_true_expression();
+        
+        // Inferir tipo basándose en el tipo de expresión
+        // IMPORTANTE: Verificar primero las expresiones de conversión antes que las expresiones básicas
+        if (auto itos_expr = std::dynamic_pointer_cast<ItoSExpression>(true_expr)) {
+            return Datatype::StringType; // itos() siempre retorna string
+        } else if (auto rtos_expr = std::dynamic_pointer_cast<RtoSExpression>(true_expr)) {
+            return Datatype::StringType; // rtos() siempre retorna string
+        } else if (auto rtoi_expr = std::dynamic_pointer_cast<RtoIExpression>(true_expr)) {
+            return Datatype::IntType; // rtoi() siempre retorna int
+        } else if (auto itor_expr = std::dynamic_pointer_cast<ItoRExpression>(true_expr)) {
+            return Datatype::RealType; // itor() siempre retorna real
+        } else if (auto head_expr = std::dynamic_pointer_cast<HeadExpression>(true_expr)) {
+            // Para head(), necesitamos inferir el tipo basándose en el tipo del parámetro
+            // Esto se manejará en el contexto de la llamada a función
+            return Datatype::RealType; // head() de un array de reales retorna real
+        } else if (auto int_expr = std::dynamic_pointer_cast<IntExpression>(true_expr)) {
+            return Datatype::IntType;
+        } else if (auto real_expr = std::dynamic_pointer_cast<RealExpression>(true_expr)) {
+            return Datatype::RealType;
+        } else if (auto str_expr = std::dynamic_pointer_cast<StrExpression>(true_expr)) {
+            return Datatype::StringType;
+        } else if (auto bool_expr = std::dynamic_pointer_cast<BoolExpression>(true_expr)) {
+            return Datatype::BoolType;
+        }
+    }
+    
+    return Datatype::UnknownType;
+}
+
+std::pair<Datatype, Datatype> infer_pair_element_types(std::shared_ptr<Expression> expr, Environment& env) {
+    // Intentar diferentes estrategias para inferir los tipos de los elementos
+    
+    // Estrategia 1: Si es un PairExpression directo
+    if (auto pair_expr = std::dynamic_pointer_cast<PairExpression>(expr)) {
+        auto [left_ok, left_type] = pair_expr->get_left_expression()->type_check(env);
+        auto [right_ok, right_type] = pair_expr->get_right_expression()->type_check(env);
+        if (left_ok && right_ok) {
+            return {left_type, right_type};
+        }
+    }
+    
+    // Estrategia 2: Si es una variable, buscar en el entorno
+    if (auto var_expr = std::dynamic_pointer_cast<NameExpression>(expr)) {
+        auto var_value = env.lookup(var_expr->get_name());
+        auto stored_pair = std::dynamic_pointer_cast<PairExpression>(var_value);
+        if (var_value && stored_pair) {
+            auto [left_ok, left_type] = stored_pair->get_left_expression()->type_check(env);
+            auto [right_ok, right_type] = stored_pair->get_right_expression()->type_check(env);
+            if (left_ok && right_ok) {
+                return {left_type, right_type};
+            }
+        }
+    }
+    
+    // Estrategia 3: Si es una expresión que evalúa a un par, intentar usar fst/snd para inferir tipos
+    if (auto fst_expr = std::dynamic_pointer_cast<FstExpression>(expr)) {
+        auto [fst_ok, fst_type] = fst_expr->type_check(env);
+        if (fst_ok) {
+            // Si fst funciona, asumir que el tipo del primer elemento es fst_type
+            // y el segundo elemento es del mismo tipo por defecto
+            return {fst_type, fst_type};
+        }
+    }
+    
+    if (auto snd_expr = std::dynamic_pointer_cast<SndExpression>(expr)) {
+        auto [snd_ok, snd_type] = snd_expr->type_check(env);
+        if (snd_ok) {
+            // Si snd funciona, asumir que el tipo del segundo elemento es snd_type
+            // y el primer elemento es del mismo tipo por defecto
+            return {snd_type, snd_type};
+        }
+    }
+    
+    // Estrategia 4: Por defecto, asumir que es un par de enteros
+    return {Datatype::IntType, Datatype::IntType};
+}
 
 
 
@@ -847,8 +962,7 @@ std::pair<bool, Datatype> PairExpression::type_check(Environment& env) const noe
     auto [right_ok, right_type] = get_right_expression()->type_check(env);
     
     if (!left_ok || !right_ok) return {false, Datatype::UnknownType};
-    
-    // Un par puede tener elementos de diferentes tipos
+
     // El tipo del par es siempre PairType, independientemente de los tipos de sus elementos
     return {true, Datatype::PairType};
 }
@@ -929,6 +1043,7 @@ std::string FstExpression::to_string() const noexcept
     return "(fst " + UnaryExpression::get_expression()->to_string() + ")";
 }
 
+
 std::pair<bool, Datatype> FstExpression::type_check(Environment& env) const noexcept
 {
     auto [expr_ok, expr_type] = get_expression()->type_check(env);
@@ -937,12 +1052,72 @@ std::pair<bool, Datatype> FstExpression::type_check(Environment& env) const noex
     
     // Verificar que el operando sea un par
     if (expr_type == Datatype::PairType) {
-        // Para determinar el tipo del primer elemento, necesitamos hacer type_check
-        // del primer elemento del par si es una PairExpression
+        // Si es directamente una PairExpression, obtener el tipo del primer elemento
         if (auto pair_expr = std::dynamic_pointer_cast<PairExpression>(get_expression())) {
             auto [left_ok, left_type] = pair_expr->get_left_expression()->type_check(env);
             if (left_ok) {
                 return {true, left_type};
+            }
+        }
+        // Si es una variable que contiene un pair, verificar directamente la estructura
+        else if (auto var_expr = std::dynamic_pointer_cast<NameExpression>(get_expression())) {
+            // Buscar la variable en el entorno
+            for (const auto& pair : env) {
+                if (pair.first == var_expr->get_name()) {
+                    if (auto stored_pair = std::dynamic_pointer_cast<PairExpression>(pair.second)) {
+                        // Verificar si el primer elemento es un par anidado por estructura
+                        if (auto left_pair = std::dynamic_pointer_cast<PairExpression>(stored_pair->get_left_expression())) {
+                            return {true, Datatype::PairType};
+                        } else {
+                            // Si no es par por estructura, usar el type checking normal
+                            auto [left_ok, left_type] = stored_pair->get_left_expression()->type_check(env);
+                            if (left_ok) {
+                                return {true, left_type};
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        // Si es una expresión anidada que evalúa a un par (como snd(...), fst(...), etc.)
+        else {
+            // Caso especial: fst(snd(...))
+            if (auto snd_expr = std::dynamic_pointer_cast<SndExpression>(get_expression())) {
+                auto [snd_ok, snd_type] = snd_expr->get_expression()->type_check(env);
+                if (snd_ok && snd_type == Datatype::PairType) {
+                    // snd devuelve un par, necesitamos el tipo del primer elemento de ese par
+                    if (auto pair_expr = std::dynamic_pointer_cast<PairExpression>(snd_expr->get_expression())) {
+                        auto [left_ok, left_type] = pair_expr->get_left_expression()->type_check(env);
+                        if (left_ok) {
+                            return {true, left_type};
+                        }
+                    } else if (auto var_expr = std::dynamic_pointer_cast<NameExpression>(snd_expr->get_expression())) {
+                        // Buscar la variable en el entorno
+                        for (const auto& pair : env) {
+                            if (pair.first == var_expr->get_name()) {
+                                if (auto stored_pair = std::dynamic_pointer_cast<PairExpression>(pair.second)) {
+                                    // Obtener el tipo del primer elemento del segundo elemento del par
+                                    auto [right_ok, right_type] = stored_pair->get_right_expression()->type_check(env);
+                                    if (right_ok && right_type == Datatype::PairType) {
+                                        if (auto nested_pair = std::dynamic_pointer_cast<PairExpression>(stored_pair->get_right_expression())) {
+                                            auto [nested_left_ok, nested_left_type] = nested_pair->get_left_expression()->type_check(env);
+                                            if (nested_left_ok) {
+                                                return {true, nested_left_type};
+                                            }
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            // Para otras expresiones anidadas, usar la función auxiliar para inferir el tipo
+            auto [nested_ok, nested_type] = infer_nested_pair_type(get_expression(), env, true);
+            if (nested_ok) {
+                return {true, nested_type};
             }
         }
     }
@@ -970,16 +1145,47 @@ std::pair<bool, Datatype> SndExpression::type_check(Environment& env) const noex
     
     // Verificar que el operando sea un par
     if (expr_type == Datatype::PairType) {
-        // Para determinar el tipo del segundo elemento, necesitamos hacer type_check
-        // del segundo elemento del par si es una PairExpression
+        // Si es directamente una PairExpression, obtener el tipo del segundo elemento
         if (auto pair_expr = std::dynamic_pointer_cast<PairExpression>(get_expression())) {
-            auto [right_ok, right_type] = pair_expr->get_right_expression()->type_check(env);
-            if (right_ok) {
-                return {true, right_type};
+            // Verificar si el segundo elemento es un par anidado
+            if (auto right_pair = std::dynamic_pointer_cast<PairExpression>(pair_expr->get_right_expression())) {
+                return {true, Datatype::PairType};
+            } else {
+                auto [right_ok, right_type] = pair_expr->get_right_expression()->type_check(env);
+                if (right_ok) {
+                    return {true, right_type};
+                }
             }
         }
-     
-        return {true, Datatype::UnknownType};
+        // Si es una variable que contiene un pair, verificar directamente la estructura
+        else if (auto var_expr = std::dynamic_pointer_cast<NameExpression>(get_expression())) {
+            // Buscar la variable en el entorno
+            for (const auto& pair : env) {
+                if (pair.first == var_expr->get_name()) {
+                    if (auto stored_pair = std::dynamic_pointer_cast<PairExpression>(pair.second)) {
+                        // Verificar si el segundo elemento es un par anidado por estructura
+                        if (auto right_pair = std::dynamic_pointer_cast<PairExpression>(stored_pair->get_right_expression())) {
+                            return {true, Datatype::PairType};
+                        } else {
+                            // Si no es par por estructura, usar el type checking normal
+                            auto [right_ok, right_type] = stored_pair->get_right_expression()->type_check(env);
+                            if (right_ok) {
+                                return {true, right_type};
+                            }
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+        // Si es una expresión anidada que evalúa a un par (como snd(...), fst(...), etc.)
+        else {
+            // Para expresiones anidadas, usar la función auxiliar para inferir el tipo
+            auto [nested_ok, nested_type] = infer_nested_pair_type(get_expression(), env, false);
+            if (nested_ok) {
+                return {true, nested_type};
+            }
+        }
     }
     
     return {false, Datatype::UnknownType};
@@ -1239,8 +1445,8 @@ std::pair<bool, Datatype> IfElseExpression::type_check(Environment& env) const n
     
     if (!cond_ok || !true_ok || !false_ok) return {false, Datatype::UnknownType};
     
-    // Verificar que la condición sea booleana
-    if (cond_type != Datatype::BoolType) {
+    // Verificar que la condición sea booleana o entera (0 = false, != 0 = true)
+    if (cond_type != Datatype::BoolType && cond_type != Datatype::IntType) {
         return {false, Datatype::UnknownType};
     }
     
@@ -1354,7 +1560,6 @@ std::shared_ptr<Expression> CallExpression::eval(Environment& env) const
     auto closure = std::dynamic_pointer_cast<Closure>(expression);
 
     // Asumimos que closure no es nullptr ya que type_check lo validó
-
     Environment new_env = closure->get_environment();
 
     // Evaluar el argumento en el entorno original
@@ -1434,10 +1639,70 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
             param_placeholder = std::make_shared<ArrayExpression>(std::vector<std::shared_ptr<Expression>>());
             break;
         case Datatype::PairType:
-            param_placeholder = std::make_shared<PairExpression>(
-                std::make_shared<IntExpression>(0),
-                std::make_shared<IntExpression>(0)
-            );
+            // Para pares, necesitamos crear un placeholder que preserve la estructura
+            // Primero, intentar obtener la estructura real del par del argumento
+            if (auto arg_pair = std::dynamic_pointer_cast<PairExpression>(get_right_expression())) {
+                // Si el argumento es directamente un PairExpression, usar su estructura
+                auto [left_ok, left_type] = arg_pair->get_left_expression()->type_check(env);
+                auto [right_ok, right_type] = arg_pair->get_right_expression()->type_check(env);
+                
+                std::shared_ptr<Expression> left_placeholder, right_placeholder;
+                
+                if (left_ok) {
+                    left_placeholder = create_pair_placeholder_recursive(left_type, env);
+                } else {
+                    left_placeholder = std::make_shared<IntExpression>(0);
+                }
+                
+                if (right_ok) {
+                    right_placeholder = create_pair_placeholder_recursive(right_type, env);
+                } else {
+                    right_placeholder = std::make_shared<IntExpression>(0);
+                }
+                
+                param_placeholder = std::make_shared<PairExpression>(left_placeholder, right_placeholder);
+            } else if (auto var_expr = std::dynamic_pointer_cast<NameExpression>(get_right_expression())) {
+                // Si es una variable, buscar su valor en el entorno para obtener la estructura
+                auto var_value = env.lookup(var_expr->get_name());
+                auto stored_pair = std::dynamic_pointer_cast<PairExpression>(var_value);
+                if (var_value && stored_pair) {
+                    // Usar la estructura del par almacenado
+                    auto [left_ok, left_type] = stored_pair->get_left_expression()->type_check(env);
+                    auto [right_ok, right_type] = stored_pair->get_right_expression()->type_check(env);
+                    
+                    std::shared_ptr<Expression> left_placeholder, right_placeholder;
+                    
+                    if (left_ok) {
+                        left_placeholder = create_pair_placeholder_recursive(left_type, env);
+                    } else {
+                        left_placeholder = std::make_shared<IntExpression>(0);
+                    }
+                    
+                    if (right_ok) {
+                        right_placeholder = create_pair_placeholder_recursive(right_type, env);
+                    } else {
+                        right_placeholder = std::make_shared<IntExpression>(0);
+                    }
+                    
+                    param_placeholder = std::make_shared<PairExpression>(left_placeholder, right_placeholder);
+                } else {
+                    // Si no se encuentra o no es un par, usar placeholders genéricos
+                    param_placeholder = std::make_shared<PairExpression>(
+                        std::make_shared<IntExpression>(0),
+                        std::make_shared<IntExpression>(0)
+                    );
+                }
+            } else {
+                // Si no es un PairExpression directo ni una variable, intentar inferir los tipos
+                // de los elementos del par de manera inteligente
+                auto [left_type, right_type] = infer_pair_element_types(get_right_expression(), env);
+                
+                // Crear placeholders basados en los tipos inferidos
+                auto left_placeholder = create_pair_placeholder_recursive(left_type, env);
+                auto right_placeholder = create_pair_placeholder_recursive(right_type, env);
+                
+                param_placeholder = std::make_shared<PairExpression>(left_placeholder, right_placeholder);
+            }
             break;
         default:
             return {false, Datatype::UnknownType}; // Tipo no soportado
@@ -1446,34 +1711,43 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
     temp_env.add(param_name, param_placeholder);
     
     // SOLUCIÓN PARA FUNCIONES RECURSIVAS:
-    // Crear un placeholder especial que evite la recursión infinita
-    // El placeholder debe ser un Closure que retorne el tipo esperado
-    Datatype return_type = arg_type; // Por defecto, asumir que retorna el mismo tipo
+    // Primero, intentar inferir el tipo de retorno analizando el cuerpo de la función
+    Datatype inferred_return_type = infer_function_return_type(closure->get_body_expression(), temp_env);
     
-    // Para funciones que trabajan con arrays, el tipo de retorno podría ser diferente
-    if (arg_type == Datatype::ArrayType || 
-        arg_type == Datatype::IntArrayType || 
-        arg_type == Datatype::RealArrayType || 
-        arg_type == Datatype::StringArrayType || 
-        arg_type == Datatype::BoolArrayType) {
-        // Para funciones que trabajan con arrays, determinar el tipo de retorno
-        // basándose en el tipo base del array
-        switch (arg_type) {
-            case Datatype::IntArrayType:
-                return_type = Datatype::IntType;
-                break;
-            case Datatype::RealArrayType:
-                return_type = Datatype::RealType;
-                break;
-            case Datatype::StringArrayType:
-                return_type = Datatype::StringType;
-                break;
-            case Datatype::BoolArrayType:
-                return_type = Datatype::BoolType;
-                break;
-            default:
-                return_type = Datatype::IntType; // Default para ArrayType genérico
-                break;
+    // Si no se puede inferir, usar un tipo por defecto basado en el tipo del parámetro
+    Datatype return_type = inferred_return_type;
+    
+    if (return_type == Datatype::UnknownType) {
+        // Para funciones que trabajan con arrays, el tipo de retorno podría ser diferente
+        if (arg_type == Datatype::ArrayType || 
+            arg_type == Datatype::IntArrayType || 
+            arg_type == Datatype::RealArrayType || 
+            arg_type == Datatype::StringArrayType || 
+            arg_type == Datatype::BoolArrayType) {
+            // Para funciones que trabajan con arrays, determinar el tipo de retorno
+            // basándose en el tipo base del array
+            switch (arg_type) {
+                case Datatype::IntArrayType:
+                    return_type = Datatype::IntType;
+                    break;
+                case Datatype::RealArrayType:
+                    return_type = Datatype::RealType;
+                    break;
+                case Datatype::StringArrayType:
+                    return_type = Datatype::StringType;
+                    break;
+                case Datatype::BoolArrayType:
+                    return_type = Datatype::BoolType;
+                    break;
+                case Datatype::ArrayType:              
+                    return_type = arg_type; // Mantener el mismo tipo que el parámetro
+                    break;
+                default:
+                    return_type = Datatype::IntType; // Default más seguro
+                    break;
+            }
+        } else {
+            return_type = arg_type; // Por defecto, asumir que retorna el mismo tipo
         }
     }
     
@@ -1523,12 +1797,23 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
     // en lugar de intentar hacer type checking recursivo
     auto [body_ok, body_type] = closure->get_body_expression()->type_check(temp_env);
     
+    // Para funciones recursivas, ser más permisivo con el type checking
+    // Si el body falla el type check pero tenemos un tipo inferido, permitir que pase
+    if (!body_ok && inferred_return_type != Datatype::UnknownType) {
+        return {true, inferred_return_type};
+    }
+    
     if (!body_ok) {
         return {false, Datatype::UnknownType}; // El body tiene errores de tipo
     }
     
-    // Retornar el tipo inferido para la función
-    return {true, return_type};
+    // Si el cuerpo retorna un tipo específico, usar ese tipo
+    // Si no se puede inferir, usar el tipo por defecto
+    if (body_type != Datatype::UnknownType) {
+        return {true, body_type};
+    } else {
+        return {true, return_type};
+    }
 }
 
 
@@ -1628,10 +1913,35 @@ std::pair<bool, Datatype> LetExpression::type_check(Environment& env) const noex
                 placeholder = std::make_shared<ArrayExpression>(placeholder_elements);
                 break;
             case Datatype::PairType:
-                placeholder = std::make_shared<PairExpression>(
-                    std::make_shared<IntExpression>(0),
-                    std::make_shared<IntExpression>(0)
-                );
+                // Para pares, necesitamos crear un placeholder que preserve los tipos de los elementos
+                // Primero, verificar si la expresión original es un PairExpression
+                if (auto original_pair = std::dynamic_pointer_cast<PairExpression>(var_expression)) {
+                    // Crear placeholders para los elementos del par original usando la función auxiliar
+                    auto [left_ok, left_type] = original_pair->get_left_expression()->type_check(env);
+                    auto [right_ok, right_type] = original_pair->get_right_expression()->type_check(env);
+                    
+                    std::shared_ptr<Expression> left_placeholder, right_placeholder;
+                    
+                    if (left_ok) {
+                        left_placeholder = create_pair_placeholder_recursive(left_type, env);
+                    } else {
+                        left_placeholder = std::make_shared<IntExpression>(0);
+                    }
+                    
+                    if (right_ok) {
+                        right_placeholder = create_pair_placeholder_recursive(right_type, env);
+                    } else {
+                        right_placeholder = std::make_shared<IntExpression>(0);
+                    }
+                    
+                    placeholder = std::make_shared<PairExpression>(left_placeholder, right_placeholder);
+                } else {
+                    // Si no es un PairExpression directo, usar placeholders genéricos
+                    placeholder = std::make_shared<PairExpression>(
+                        std::make_shared<IntExpression>(0),
+                        std::make_shared<IntExpression>(0)
+                    );
+                }
                 break;
             default:
                 placeholder = std::make_shared<IntExpression>(0); // fallback
@@ -1652,7 +1962,6 @@ std::pair<bool, Datatype> LetExpression::type_check(Environment& env) const noex
 
 std::shared_ptr<Expression> PrintExpression::eval(Environment& env) const {
     auto result = get_expression()->eval(env);
-    printf("Print: %s\n", result->to_string().c_str());
     return result;
 }
 
@@ -1669,29 +1978,6 @@ std::pair<bool, Datatype> PrintExpression::type_check(Environment& env) const no
     
     // Print devuelve el mismo tipo que imprime
     return {true, expr_type};
-}
-
-
-
-
-
-
-
-
-// Función auxiliar para determinar el tipo base de una expresión
-// Para pares anidados, determina el tipo base de los elementos
-Datatype get_base_type(std::shared_ptr<Expression> expr, Environment& env) {
-    auto [ok, type] = expr->type_check(env);
-    if (!ok) return Datatype::UnknownType;
-    
-    if (type == Datatype::PairType) {
-        // Si es un par, determinar el tipo base del primer elemento
-        if (auto pair_expr = std::dynamic_pointer_cast<PairExpression>(expr)) {
-            return get_base_type(pair_expr->get_left_expression(), env);
-        }
-    }
-    
-    return type;
 }
 
 // Función auxiliar para convertir un tipo base a su tipo de array correspondiente

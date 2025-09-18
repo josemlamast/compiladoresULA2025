@@ -5,15 +5,18 @@
 #include <memory>
 #include <string>
 #include <utility>
+#include <vector>
+#include <iostream>
 
 #ifdef DEBUG
-#define LOG(...) printf(__VA_ARGS__); printf("\n");
 #else
 #define LOG(...)
 #endif
 
 class Environment;
 enum class Datatype;
+class PairExpression;
+class Expression;
 
 class Expression
 {
@@ -95,3 +98,63 @@ private:
     Datatype parameter_type;
     Datatype return_type;
 };
+
+// Estructura para almacenar información de tipos de pares
+struct PairTypeInfo {
+    Datatype left_type;
+    Datatype right_type;
+    bool is_nested;
+
+    PairTypeInfo(Datatype left, Datatype right, bool nested) 
+        : left_type(left), right_type(right), is_nested(nested) {}
+
+    Datatype get_left_type() const { return left_type; }
+    Datatype get_right_type() const { return right_type; }
+    bool get_is_nested() const { return is_nested; }
+};
+
+// Estructura para rastrear tipos de elementos en pares anidados
+struct PairTypePath {
+    std::vector<Datatype> type_sequence;  // Secuencia de tipos: [int, real, string, real]
+    std::vector<bool> is_left_sequence;   // Secuencia de posiciones: [true, false, true, false]
+
+    PairTypePath() = default;
+
+    // Constructor para crear un path desde una expresión
+    PairTypePath(std::shared_ptr<Expression> expr, Environment& env);
+
+    // Obtener el tipo en una posición específica del path
+    Datatype get_type_at_position(size_t position) const;
+
+    // Obtener la posición (izquierda/derecha) en una posición específica del path
+    bool is_left_at_position(size_t position) const;
+
+    // Obtener la longitud del path
+    size_t get_length() const;
+
+    // Verificar si el path es válido
+    bool is_valid() const;
+
+    // Obtener el tipo del elemento en la posición especificada
+    // position: 0 = primer elemento, 1 = segundo elemento, etc.
+    Datatype get_element_type(size_t position) const;
+
+    // Convertir a string para debugging
+    std::string to_string() const;
+
+private:
+    // Método auxiliar para procesar expresiones de par recursivamente
+    void process_pair_expression(std::shared_ptr<PairExpression> pair_expr, Environment& env, bool is_left);
+};
+
+// Funciones auxiliares para manejo de pares anidados
+PairTypeInfo get_pair_type_info(std::shared_ptr<Expression> expr, Environment& env);
+
+// Función para crear un path de tipos desde una expresión de par anidado
+PairTypePath create_pair_type_path(std::shared_ptr<Expression> expr, Environment& env);
+
+// Función para obtener el tipo de un elemento en una posición específica usando fst/snd
+std::pair<bool, Datatype> get_nested_pair_element_type(std::shared_ptr<Expression> expr, Environment& env, size_t position);
+
+// Función auxiliar para inferir el tipo de expresiones anidadas sin evaluar
+std::pair<bool, Datatype> infer_nested_pair_type(std::shared_ptr<Expression> expr, Environment& env, bool get_left);

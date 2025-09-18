@@ -46,21 +46,17 @@ Environment global_env;
 
 // Función para crear una secuencia de declaraciones
 Expression* create_statement_sequence(Expression* prev, Expression* current) {
-    printf("DEBUG: create_statement_sequence called\n");
     
     // Si la expresión anterior es una declaración de función, la almacenamos en el entorno global
     if (prev != nullptr) {
-        printf("DEBUG: prev is not null\n");
         auto fun_expr = dynamic_cast<FunExpression*>(prev);
         if (fun_expr != nullptr) {
-            printf("DEBUG: Found function declaration in prev\n");
             // Store the function in the global environment
             std::string func_name = fun_expr->get_name();
             
             // First do type check
             auto [type_ok, type_result] = fun_expr->type_check(global_env);
             if (!type_ok) {
-                printf("ERROR: Type check failed for function '%s'\n", func_name.c_str());
                 return current; // Continue with current expression
             }
             
@@ -80,7 +76,6 @@ Expression* create_statement_sequence(Expression* prev, Expression* current) {
             auto closure = std::make_shared<Closure>(global_env, param_name, fun_expr->get_body_expression(),
                                                     param_type, return_type);
             global_env.add(func_name, closure);
-            printf("DEBUG: Stored function '%s' as closure in global environment\n", func_name.c_str());
         }
     }
     
@@ -88,14 +83,12 @@ Expression* create_statement_sequence(Expression* prev, Expression* current) {
     if (current != nullptr) {
         auto fun_expr = dynamic_cast<FunExpression*>(current);
         if (fun_expr != nullptr) {
-            printf("DEBUG: Found function declaration in current\n");
             // Store the function in the global environment
             std::string func_name = fun_expr->get_name();
             
             // First do type check
             auto [type_ok, type_result] = fun_expr->type_check(global_env);
             if (!type_ok) {
-                printf("ERROR: Type check failed for function '%s'\n", func_name.c_str());
                 return current; // Continue with current expression
             }
             
@@ -115,7 +108,6 @@ Expression* create_statement_sequence(Expression* prev, Expression* current) {
             auto closure = std::make_shared<Closure>(global_env, param_name, fun_expr->get_body_expression(),
                                                     param_type, return_type);
             global_env.add(func_name, closure);
-            printf("DEBUG: Stored function '%s' as closure in global environment\n", func_name.c_str());
         }
     }
     
@@ -246,7 +238,6 @@ statement : function_declaration
 variable_declaration : TOKEN_LET let_var_save TOKEN_ASIG expr TOKEN_IN expr TOKEN_END
     {
         char* let_var = pop_let_var();
-        std::cout << "Let variable: " << (let_var ? let_var : "NULL") << std::endl;
         
         // Use the let variable from the stack
         auto var_name = std::make_shared<NameExpression>(copy_string(let_var));
@@ -262,9 +253,6 @@ variable_declaration : TOKEN_LET let_var_save TOKEN_ASIG expr TOKEN_IN expr TOKE
 
 function_declaration : TOKEN_FUN fname_save TOKEN_LPAREN param_save TOKEN_RPAREN  statement TOKEN_END
     {
-        printf("DEBUG: In function_declaration - saved_function_name='%s', saved_param_name='%s'\n", 
-               saved_function_name ? saved_function_name : "NULL", 
-               saved_param_name ? saved_param_name : "NULL");
         
         auto func_name = std::make_shared<NameExpression>(copy_string(saved_function_name));
         auto param_name = std::make_shared<NameExpression>(copy_string(saved_param_name));
@@ -278,7 +266,6 @@ fname_save : TOKEN_IDENTIFIER
             free(saved_function_name);
         }
         saved_function_name = strdup(last_identifier);
-        printf("DEBUG: fname_save - saved_function_name='%s'\n", saved_function_name);
         $$ = nullptr; // No necesitamos un valor semántico
     }
 
@@ -289,7 +276,6 @@ param_save : TOKEN_IDENTIFIER
             free(saved_param_name);
         }
         saved_param_name = strdup(last_identifier);
-        printf("DEBUG: param_save - saved_param_name='%s'\n", saved_param_name);
         $$ = nullptr; // No necesitamos un valor semántico
     }
 
@@ -451,7 +437,6 @@ identifier : TOKEN_IDENTIFIER
 
 function_call : TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
                     { 
-                        std::cout << "DEBUG: Parsing function call - function name: " << function_name << std::endl;
                         auto func_name = std::make_shared<NameExpression>(copy_string(function_name));
                         $$ = new CallExpression(func_name, std::shared_ptr<Expression>($3));
                     }
@@ -553,6 +538,5 @@ elements : elements TOKEN_COMA expr
 %% /* ---------- user code ---------- */
 
 int yyerror(const char* s) {
-    printf("Parse error: %s\n", s);
         return 1;
     }
