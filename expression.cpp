@@ -44,9 +44,10 @@ Datatype infer_function_return_type(std::shared_ptr<Expression> body, Environmen
     
     // Analizar solo la estructura de la expresión para inferir el tipo
     if (auto if_expr = std::dynamic_pointer_cast<IfElseExpression>(body)) {
-        // Para if expressions, analizar solo la rama true (evitar recursión)
+        // Para if expressions, analizar ambas ramas (evitar recursión)
         // No hacer type_check completo, solo inferir del tipo de expresión
         auto true_expr = if_expr->get_true_expression();
+        auto false_expr = if_expr->get_false_expression();
         
         // Inferir tipo basándose en el tipo de expresión
         // IMPORTANTE: Verificar primero las expresiones de conversión antes que las expresiones básicas
@@ -61,7 +62,8 @@ Datatype infer_function_return_type(std::shared_ptr<Expression> body, Environmen
         } else if (auto head_expr = std::dynamic_pointer_cast<HeadExpression>(true_expr)) {
             // Para head(), necesitamos inferir el tipo basándose en el tipo del parámetro
             // Esto se manejará en el contexto de la llamada a función
-            return Datatype::RealType; // head() de un array de reales retorna real
+            // No podemos inferir el tipo aquí sin conocer el tipo del array, así que retornamos UnknownType
+            return Datatype::UnknownType; // Se inferirá correctamente en CallExpression::type_check
         } else if (auto int_expr = std::dynamic_pointer_cast<IntExpression>(true_expr)) {
             return Datatype::IntType;
         } else if (auto real_expr = std::dynamic_pointer_cast<RealExpression>(true_expr)) {
@@ -69,6 +71,30 @@ Datatype infer_function_return_type(std::shared_ptr<Expression> body, Environmen
         } else if (auto str_expr = std::dynamic_pointer_cast<StrExpression>(true_expr)) {
             return Datatype::StringType;
         } else if (auto bool_expr = std::dynamic_pointer_cast<BoolExpression>(true_expr)) {
+            return Datatype::BoolType;
+        }
+        
+        // También analizar la rama false para funciones recursivas
+        if (auto itos_expr = std::dynamic_pointer_cast<ItoSExpression>(false_expr)) {
+            return Datatype::StringType; // itos() siempre retorna string
+        } else if (auto rtos_expr = std::dynamic_pointer_cast<RtoSExpression>(false_expr)) {
+            return Datatype::StringType; // rtos() siempre retorna string
+        } else if (auto rtoi_expr = std::dynamic_pointer_cast<RtoIExpression>(false_expr)) {
+            return Datatype::IntType; // rtoi() siempre retorna int
+        } else if (auto itor_expr = std::dynamic_pointer_cast<ItoRExpression>(false_expr)) {
+            return Datatype::RealType; // itor() siempre retorna real
+        } else if (auto head_expr = std::dynamic_pointer_cast<HeadExpression>(false_expr)) {
+            // Para head(), necesitamos inferir el tipo basándose en el tipo del parámetro
+            // Esto se manejará en el contexto de la llamada a función
+            // No podemos inferir el tipo aquí sin conocer el tipo del array, así que retornamos UnknownType
+            return Datatype::UnknownType; // Se inferirá correctamente en CallExpression::type_check
+        } else if (auto int_expr = std::dynamic_pointer_cast<IntExpression>(false_expr)) {
+            return Datatype::IntType;
+        } else if (auto real_expr = std::dynamic_pointer_cast<RealExpression>(false_expr)) {
+            return Datatype::RealType;
+        } else if (auto str_expr = std::dynamic_pointer_cast<StrExpression>(false_expr)) {
+            return Datatype::StringType;
+        } else if (auto bool_expr = std::dynamic_pointer_cast<BoolExpression>(false_expr)) {
             return Datatype::BoolType;
         }
     }
@@ -1635,9 +1661,30 @@ std::pair<bool, Datatype> CallExpression::type_check(Environment& env) const noe
         case Datatype::IntArrayType:
         case Datatype::RealArrayType:
         case Datatype::StringArrayType:
-        case Datatype::BoolArrayType:
-            param_placeholder = std::make_shared<ArrayExpression>(std::vector<std::shared_ptr<Expression>>());
+        case Datatype::BoolArrayType: {
+            // Crear un array placeholder con elementos del tipo correcto para preservar el tipo específico
+            std::vector<std::shared_ptr<Expression>> placeholder_elements;
+            switch (arg_type) {
+                case Datatype::IntArrayType:
+                    placeholder_elements.push_back(std::make_shared<IntExpression>(0));
+                    break;
+                case Datatype::RealArrayType:
+                    placeholder_elements.push_back(std::make_shared<RealExpression>(0.0));
+                    break;
+                case Datatype::StringArrayType:
+                    placeholder_elements.push_back(std::make_shared<StrExpression>(""));
+                    break;
+                case Datatype::BoolArrayType:
+                    placeholder_elements.push_back(std::make_shared<BoolExpression>(false));
+                    break;
+                default:
+                    // Para ArrayType genérico, usar int como fallback
+                    placeholder_elements.push_back(std::make_shared<IntExpression>(0));
+                    break;
+            }
+            param_placeholder = std::make_shared<ArrayExpression>(placeholder_elements);
             break;
+        }
         case Datatype::PairType:
             // Para pares, necesitamos crear un placeholder que preserve la estructura
             // Primero, intentar obtener la estructura real del par del argumento
