@@ -1,0 +1,425 @@
+GRAMÁTICA COMPLETA DEL LENGUAJE
+==============================
+
+ESTE ARCHIVO CONTIENE TODAS LAS REGLAS Y SINTAXIS DEL LENGUAJE
+PARA CONSULTAS FUTURAS Y EVITAR ERRORES DE RECORDACIÓN
+
+==========================================
+1. SINTAXIS BÁSICA Y ESTRUCTURAS
+==========================================
+
+1.1 EXPRESIONES LET (Variables Locales)
+---------------------------------------
+SINTAXIS: let variable = valor in expresion end
+
+EJEMPLOS:
+- let x = 5 in x + 1 end
+- let y = "hello" in y end
+- let z = true in if(z) 1 else 0 end end
+
+REGLAS:
+- ✅ Permite tipos mixtos en if-else (reporta tipo de primera rama)
+- ✅ Anidamiento ilimitado
+- ✅ Scope local (variable solo visible dentro del let)
+
+1.2 EXPRESIONES IF-ELSE (Condicionales)
+---------------------------------------
+SINTAXIS: if(condicion) expresion_verdadera else expresion_falsa end
+
+EJEMPLOS:
+- if(x > 0) 1 else 0 end
+- if(y == "hello") "world" else "universe" end
+- if(z) true else false end
+
+REGLAS:
+- ✅ Condición debe ser booleana
+- ✅ En let: permite tipos diferentes en ramas
+- ✅ En funciones: requiere tipos consistentes en ramas
+
+1.3 FUNCIONES
+-------------
+DECLARACIÓN: fun nombre(parametro) cuerpo end
+LLAMADA: nombre(parametro) o call nombre(parametro)
+
+EJEMPLOS:
+- fun add(x) x + 1 end
+- fun factorial(x) if(x <= 1) 1 else x * factorial(x - 1) end end
+- add(5) o call add(5)
+
+REGLAS CRÍTICAS:
+- ❌ SOLO UN PARÁMETRO por función (limitación del parser)
+- ✅ Funciones deben estar definidas antes de ser llamadas
+- ✅ Funciones recursivas permitidas
+- ✅ En funciones: tipos consistentes en if-else (estricto)
+- ✅ En let: tipos mixtos permitidos (permisivo)
+
+==========================================
+2. TIPOS DE DATOS
+==========================================
+
+2.1 TIPOS PRIMITIVOS
+--------------------
+- int: 1, 2, 3, -5, 0
+- real: 3.14, 2.0, -1.5, 0.0
+- string: "hello", "world", ""
+- bool: true, false
+
+2.2 TIPOS COMPUESTOS
+--------------------
+- pair: (expresion1, expresion2)
+- array: [elemento1, elemento2, ...]
+
+EJEMPLOS:
+- (5, "hello"): pair de int y string
+- [1, 2, 3]: array de enteros
+- ["a", "b", "c"]: array de strings
+- (3.14, true): pair de real y bool
+
+2.3 CONVERSIONES DE TIPO
+------------------------
+- itor(x): int → real
+- rtoi(x): real → int
+- itos(x): int → string
+- rtos(x): real → string
+
+EJEMPLOS:
+- itor(5) → 5.0
+- rtoi(3.14) → 3
+- itos(42) → "42"
+- rtos(2.5) → "2.5"
+
+REGLAS:
+- ✅ Conversiones funcionan como literales
+- ✅ Se pueden usar en expresiones
+
+2.4 TIPOS DE ARRAYS Y PAIRS
+----------------------------
+TIPOS DE ARRAYS:
+- int_array: [1, 2, 3]
+- real_array: [1.5, 2.5, 3.5]
+- string_array: ["a", "b", "c"]
+- bool_array: [true, false, true]
+
+TIPOS DE PAIRS:
+- pair: (cualquier_tipo, cualquier_tipo)
+- Ejemplos: (int, string), (real, bool), (pair, array)
+
+REGLAS DE TIPOS:
+- ✅ Arrays mantienen tipo homogéneo
+- ✅ Pairs pueden tener tipos diferentes
+- ✅ head() retorna el tipo del primer elemento
+- ✅ tail() retorna el tipo del array
+- ✅ length() siempre retorna int
+- ✅ fst() y snd() retornan el tipo del elemento correspondiente
+
+==========================================
+3. OPERADORES
+==========================================
+
+3.1 OPERADORES ARITMÉTICOS
+--------------------------
+- + (suma): int + int, real + real
+- - (resta): int - int, real - real
+- * (multiplicación): int * int, real * real
+- / (división): int / int, real / real
+- % (módulo): int % int
+
+3.2 OPERADORES DE COMPARACIÓN
+-----------------------------
+- == (igualdad): cualquier tipo
+- != (desigualdad): cualquier tipo
+- > (mayor que): int, real, string
+- < (menor que): int, real, string
+- >= (mayor o igual): int, real, string
+- <= (menor o igual): int, real, string
+
+3.3 OPERADORES LÓGICOS
+----------------------
+- && (AND): bool && bool
+- || (OR): bool || bool
+- ! (NOT): !bool
+
+3.4 OPERADORES DE CONCATENACIÓN
+-------------------------------
+- # (concatenación): string # string
+
+3.5 OPERACIONES DE ARRAYS
+--------------------------
+- head(array): Obtiene el primer elemento
+- tail(array): Obtiene el array sin el primer elemento
+- length(array): Obtiene la longitud del array
+- <+>(array_literal, elemento): Agrega elemento al final
+- <->(array_literal, indice): Elimina elemento por índice
+
+EJEMPLOS:
+- head([1, 2, 3]) → 1
+- tail([1, 2, 3]) → [2, 3]
+- length([1, 2, 3]) → 3
+- <+>([1, 2], 3) → [1, 2, 3]
+- <->([1, 2, 3], 1) → [1, 3]
+
+3.6 OPERACIONES DE PAIRS
+-------------------------
+- fst(pair): Obtiene el primer elemento del pair
+- snd(pair): Obtiene el segundo elemento del pair
+
+EJEMPLOS:
+- fst((5, "hello")) → 5
+- snd((5, "hello")) → "hello"
+
+==========================================
+4. REGLAS DE TIPO CHECKING
+==========================================
+
+4.1 EN EXPRESIONES LET
+----------------------
+- ✅ PERMISIVO: Permite tipos diferentes en ramas if-else
+- ✅ Reporta el tipo de la PRIMERA rama
+- ✅ No falla por tipos mixtos
+
+EJEMPLO:
+let x = 5 in
+    if(x > 0)
+        42        ← int
+    else
+        "hello"   ← string
+    end
+end
+→ Tipo reportado: int (primera rama)
+
+4.2 EN FUNCIONES
+----------------
+- ❌ ESTRICTO: Requiere tipos consistentes en ramas if-else
+- ❌ Falla si las ramas tienen tipos diferentes
+- ✅ Retorna UnknownType si hay conflicto
+
+EJEMPLO:
+fun getValue(x)
+    if(x > 0)
+        42        ← int
+    else
+        "hello"   ← string
+    end
+end
+→ Error: Type check failed (tipos inconsistentes)
+
+4.3 OPERACIONES ARITMÉTICAS
+---------------------------
+- ✅ int + int → int
+- ✅ real + real → real
+- ✅ string + string → string
+- ❌ int + string → Error
+- ❌ real + bool → Error
+
+==========================================
+5. LIMITACIONES DEL PARSER
+==========================================
+
+5.1 FUNCIONES
+-------------
+- ❌ NO soporta múltiples parámetros: fun add(x, y) ← ERROR
+- ✅ Solo un parámetro: fun add(x) ← OK
+- ✅ Funciones recursivas permitidas
+- ✅ Funciones deben estar definidas antes de llamarse
+
+5.2 SINTAXIS
+------------
+- ✅ Paréntesis requeridos en if: if(condicion)
+- ✅ end requerido para cerrar bloques
+- ✅ Espacios en blanco opcionales
+- ✅ Indentación no significativa
+
+==========================================
+6. EJEMPLOS COMPLETOS
+==========================================
+
+6.1 LET CON IF-ELSE SIMPLE
+--------------------------
+let x = 5 in
+    if(x > 0)
+        x + 1
+    else
+        x - 1
+    end
+end
+→ Resultado: 6, Tipo: int
+
+6.2 LET CON TIPOS MIXTOS (PERMITIDO)
+------------------------------------
+let x = 5 in
+    if(x > 0)
+        42
+    else
+        "negative"
+    end
+end
+→ Resultado: 42, Tipo: int (primera rama)
+
+6.3 FUNCIÓN RECURSIVA
+---------------------
+fun factorial(x)
+    if(x <= 1)
+        1
+    else
+        x * factorial(x - 1)
+    end
+end
+
+let n = 5 in
+    factorial(n)
+end
+→ Resultado: 120, Tipo: int
+
+6.4 LET CON FUNCIÓN DECLARADA
+-----------------------------
+fun add(x)
+    x + 10
+end
+
+let y = 5 in
+    if(y > 0)
+        add(y)
+    else
+        add(y)
+    end
+end
+→ Resultado: 15, Tipo: int
+
+6.5 CONVERSIONES DE TIPO
+------------------------
+let x = 5 in
+    if(x > 0)
+        itor(x)
+    else
+        itos(x)
+    end
+end
+→ Resultado: 5.0, Tipo: real (primera rama)
+
+6.6 OPERACIONES CON ARRAYS
+---------------------------
+let numeros = [1, 2, 3, 4, 5] in
+    head(numeros)
+end
+→ Resultado: 1, Tipo: int
+
+let colores = ["rojo", "verde", "azul"] in
+    length(colores)
+end
+→ Resultado: 3, Tipo: int
+
+6.7 OPERACIONES CON PAIRS
+--------------------------
+let mi_pair = (10, "hello") in
+    fst(mi_pair)
+end
+→ Resultado: 10, Tipo: int
+
+let coordenadas = (3.14, 2.71) in
+    snd(coordenadas)
+end
+→ Resultado: 2.71, Tipo: real
+
+6.8 FUNCIONES CON ARRAYS
+-------------------------
+fun sumarArray(x)
+    if(length(x) == 1)
+        head(x)
+    else
+        head(x) + sumarArray(tail(x))
+    end
+end
+
+let numeros = [1, 2, 3, 4, 5] in
+    sumarArray(numeros)
+end
+→ Resultado: 15, Tipo: int
+
+==========================================
+7. ERRORES COMUNES Y SOLUCIONES
+==========================================
+
+7.1 PARSE FAILED
+----------------
+CAUSA: Función no definida
+SOLUCIÓN: Definir función con fun nombre(param) cuerpo end
+
+CAUSA: Múltiples parámetros en función
+SOLUCIÓN: Usar solo un parámetro por función
+
+CAUSA: Sintaxis incorrecta
+SOLUCIÓN: Verificar paréntesis, end, y estructura
+
+7.2 TYPE CHECK FAILED
+---------------------
+CAUSA: Tipos inconsistentes en función
+SOLUCIÓN: Asegurar tipos consistentes en ramas if-else
+
+CAUSA: Operación entre tipos incompatibles
+SOLUCIÓN: Usar conversiones o tipos consistentes
+
+CAUSA: Usar <+>() o <->() con variables de array
+SOLUCIÓN: Usar solo con literales de array directos
+
+CAUSA: Índice fuera de rango en <->()
+SOLUCIÓN: Verificar que el índice esté entre 0 y length(array)-1
+
+CAUSA: Usar fst() o snd() en tipos que no son pairs
+SOLUCIÓN: Asegurar que la expresión sea un pair válido
+
+==========================================
+8. RESUMEN DE REGLAS CRÍTICAS
+==========================================
+
+✅ FUNCIONES:
+- Solo un parámetro: fun nombre(param) cuerpo end
+- Definir antes de llamar
+- Tipos consistentes en if-else (estricto)
+
+✅ LET:
+- Permite tipos mixtos en if-else (permisivo)
+- Reporta tipo de primera rama
+- Anidamiento ilimitado
+
+✅ OPERACIONES:
+- Tipos consistentes en operaciones aritméticas
+- Conversiones disponibles: itor, rtoi, itos, rtos
+- Arrays: head(), tail(), length(), <+>(), <->()
+- Pairs: fst(), snd()
+
+✅ SINTAXIS:
+- if(condicion) ... else ... end
+- let variable = valor in ... end
+- fun nombre(param) ... end
+- Arrays: [elemento1, elemento2, ...]
+- Pairs: (expresion1, expresion2)
+
+❌ LIMITACIONES:
+- No múltiples parámetros en funciones (se pueden usar pair o arrays)
+- No tipos mixtos en funciones
+- No operaciones entre tipos incompatibles
+- <+>() y <->() solo con literales de array
+- fst() y snd() solo con pairs
+
+
+==========================================
+9. COMANDOS DE PRUEBA
+==========================================
+
+Para probar código:
+./main < archivo.txt
+
+Para compilar:
+make
+
+Para limpiar:
+make clean
+
+
+====================================================================================
+10. Ver los ejemplos de prueba para aprender como se usa el lenguaje
+====================================================================================
+
+
+
+==========================================

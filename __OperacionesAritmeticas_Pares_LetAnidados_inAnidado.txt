@@ -1,0 +1,57 @@
+   fun add(x)
+        fst(x)  + snd(x)
+     end
+     
+     fun subtract(x)
+         fst(x) - snd(x)
+     end
+     
+     fun multiply(x)
+        fst(x)  * snd(x)
+     end
+     
+     fun divide(x)
+        fst(x)  / snd(x)
+     end
+     
+      fun resto(x)
+        fst(x)  % snd(x)
+     end
+
+     @
+     El par puede funcionar con reales tambien para las primeras 4 operaciones, 
+     pero la funcion resto solo funciona con enteros, 
+     por ello dara check_fail si no se cambia esa operacion. 
+
+     si los numeros del par no son del mismo tipo tambien dara type_check Error. (5 , 2.6) -> error
+     @
+
+
+     
+     let x = "sum" in
+        let y = (5 , 5) in
+            if (x == "sum" ) 
+                add(y)
+            else
+                if (x == "sub" ) 
+                   subtract(y)
+                else
+                    if  (x == "mult" ) 
+                        multiply(y)
+                    else
+                        if  (x == "div" ) 
+                            divide(y)
+                        else
+                            if (x == "rest")
+                                resto(y)
+                            else
+                                print("no ha ingresado una operacion ha")
+                            end
+                        end
+             
+                    end
+                end
+             
+            end
+        end
+     end

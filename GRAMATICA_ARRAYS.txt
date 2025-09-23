@@ -1,0 +1,131 @@
+EJEMPLOS DE OPERACIONES DE ARRAYS
+=================================
+
+Basado en la gramática del lenguaje, aquí están los ejemplos de cómo agregar y eliminar elementos de arrays.
+
+==========================================
+1. AGREGAR ELEMENTOS A UN ARRAY
+==========================================
+
+SINTAXIS: <+>(array_literal, elemento)
+
+EJEMPLO 1: Agregar un entero a un array de enteros
+-----------------------------------------------
+<+>([1, 2, 3], 4)
+
+EXPLICACIÓN:
+- Array inicial: [1, 2, 3]
+- <+>([1, 2, 3], 4) agrega el elemento 4 al final
+- Resultado: [1, 2, 3, 4]
+- Tipo: int_array
+
+EJEMPLO 2: Agregar un string a un array de strings
+-----------------------------------------------
+<+>(["hola", "mundo"], "programacion")
+
+EXPLICACIÓN:
+- Array inicial: ["hola", "mundo"]
+- <+>(["hola", "mundo"], "programacion") agrega el string al final
+- Resultado: ["hola", "mundo", "programacion"]
+- Tipo: string_array
+
+==========================================
+2. ELIMINAR ELEMENTOS DE UN ARRAY
+==========================================
+
+SINTAXIS: <->(array, indice)
+
+EJEMPLO 1: Eliminar elemento por índice (array de enteros)
+--------------------------------------------------------
+<->([10, 20, 30, 40], 1)
+
+EXPLICACIÓN:
+- Array inicial: [10, 20, 30, 40]
+- <->([10, 20, 30, 40], 1) elimina el elemento en índice 1 (20)
+- Resultado: [10, 30, 40]
+- Tipo: int_array
+
+EJEMPLO 2: Eliminar elemento por índice (array de strings)
+--------------------------------------------------------
+<->(["rojo", "verde", "azul", "amarillo"], 2)
+
+EXPLICACIÓN:
+- Array inicial: ["rojo", "verde", "azul", "amarillo"]
+- <->(["rojo", "verde", "azul", "amarillo"], 2) elimina el elemento en índice 2 ("azul")
+- Resultado: ["rojo", "verde", "amarillo"]
+- Tipo: string_array
+
+==========================================
+3. OPERACIONES ADICIONALES DE ARRAYS
+==========================================
+
+head(array): Obtiene el primer elemento
+tail(array): Obtiene el array sin el primer elemento
+length(array): Obtiene la longitud del array
+
+EJEMPLO: Usando head, tail y length
+---------------------------------
+let mi_lista = [1, 2, 3, 4, 5] in
+    let primer_elemento = head(mi_lista) in
+        let resto = tail(mi_lista) in
+            let tamaño = length(mi_lista) in
+                primer_elemento + length(resto)
+            end
+        end
+    end
+end
+
+EXPLICACIÓN:
+- head(mi_lista) = 1 (primer elemento)
+- tail(mi_lista) = [2, 3, 4, 5] (sin el primer elemento)
+- length(mi_lista) = 5 (tamaño total)
+- length(resto) = 4 (tamaño del tail)
+- Resultado: 1 + 4 = 5
+
+==========================================
+4. FUNCIONES RECURSIVAS CON ARRAYS
+==========================================
+
+EJEMPLO: Función para sumar todos los elementos de un array
+---------------------------------------------------------
+fun sumarArray(x)
+    if(length(x) == 1)
+        head(x)
+    else
+        head(x) + sumarArray(tail(x))
+    end
+end
+
+let numeros = [1, 2, 3, 4, 5] in
+    sumarArray(numeros)
+end
+
+EXPLICACIÓN:
+- La función suma recursivamente todos los elementos
+- Resultado: 1 + 2 + 3 + 4 + 5 = 15
+
+==========================================
+5. NOTAS IMPORTANTES Y LIMITACIONES
+==========================================
+
+LIMITACIONES CRÍTICAS:
+- <+>() y <->() SOLO funcionan con literales de array directos
+- NO se pueden usar con variables que contengan arrays
+- Ejemplo INCORRECTO: let arr = [1,2,3] in <+>(arr, 4) end
+- Ejemplo CORRECTO: <+>([1,2,3], 4)
+
+REGLAS DE USO:
+- Los índices en <->() empiezan en 0
+- <+>() siempre agrega al final del array
+- <->() elimina por índice específico
+- head() y tail() no modifican el array original
+- length() retorna un entero
+- Las operaciones de arrays mantienen el tipo del array
+
+SINTAXIS CORRECTA:
+- <+>(array_literal, elemento)
+- <->(array_literal, indice)
+- head(array_variable)
+- tail(array_variable)
+- length(array_variable)
+

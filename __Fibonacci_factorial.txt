@@ -1,0 +1,24 @@
+ fun fibonacci(x)
+         if(x <= 1)
+             x
+         else
+             fibonacci(x - 1) + fibonacci(x - 2)
+         end
+     end
+     
+    fun factorial(x)
+        if(x == 0)
+            1
+        else
+            x * factorial(x - 1)
+        end
+    end
+
+  
+     let x = 6 in
+         if(x < 0)
+             factorial(x)
+         else
+             fibonacci(x)
+         end
+     end

@@ -1,0 +1,25 @@
+fun concatArrayIntToString (x)  
+ 
+        @
+        el if, tambien podria ser  
+        if(length(x) == 1)         
+                rtos(head((x)))
+        @ 
+
+if(x == empty) 
+  ""   
+    else
+      rtos(head(x)) # " | " # concatArrayIntToString(tail(x))
+    end
+end
+
+@ 
+concatena todos los elementos dentro de un array
+en este caso realizamos un parse dentro de la funcion de real a string,
+funciona equivalente con itos.
+@
+
+let w = [1.5 , 2.4 , 3.3 , 4.2 , 6.1 ] in 
+       concatArrayIntToString(w)
+    end
+

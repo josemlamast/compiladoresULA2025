@@ -16,6 +16,7 @@
     char* let_var_stack[100];
     int let_var_stack_top = 0;
     extern char* function_name;
+    extern char* current_function_name;
 
     char* saved_function_name = nullptr;
     char* saved_param_name = nullptr;
@@ -303,7 +304,7 @@ expr : expr TOKEN_OR and_expr
         std::shared_ptr<Expression>($3)
     ); }    
     | and_expr                 
-    | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN statement TOKEN_ELSE statement TOKEN_END
+    | TOKEN_IF TOKEN_LPAREN expr TOKEN_RPAREN expr TOKEN_ELSE expr TOKEN_END
     {
         $$ = new IfElseExpression( 
             std::shared_ptr<Expression>($3), 
@@ -437,7 +438,7 @@ identifier : TOKEN_IDENTIFIER
 
 function_call : TOKEN_IDENTIFIER TOKEN_LPAREN expr TOKEN_RPAREN
                     { 
-                        auto func_name = std::make_shared<NameExpression>(copy_string(function_name));
+                        auto func_name = std::make_shared<NameExpression>(copy_string(current_function_name));
                         $$ = new CallExpression(func_name, std::shared_ptr<Expression>($3));
                     }
                   | TOKEN_FST TOKEN_LPAREN expr TOKEN_RPAREN     

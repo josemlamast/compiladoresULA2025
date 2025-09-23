@@ -7,6 +7,7 @@
 
 char* function_name = nullptr;
 char* last_identifier = nullptr;
+char* current_function_name = nullptr;
 
 int let_context = 0;
 %}
@@ -17,7 +18,7 @@ LETTER     [A-Za-z]
 INT     ({DIGIT}+)
 REAL ({DIGIT}+([.]{DIGIT}+))
 IDENTIFIER ({LETTER})({DIGIT}|{LETTER}|_)*
-TEXT       (\"({DIGIT}|{LETTER}|{SPACE}|[+\-*/])*\")
+TEXT       (\"[^\"]*\")
 COMMENTL (@@[^@]*)
 COMMENTML   @[^@]*@
 COMMENT ({COMMENTL}|{COMMENTML})
@@ -77,7 +78,6 @@ NARRAY (<{DIGIT}+>)
 "," { return TOKEN_COMA;}
 "<+>" { return TOKEN_ADD_ARRAY;}
 "<->" { return TOKEN_DEL_ARRAY;}
-{NARRAY} { return TOKEN_NARRAY; }
 
 
 {COMMENT} {/*ignorar*/}
@@ -92,10 +92,10 @@ NARRAY (<{DIGIT}+>)
     int c = yyinput();
     if (c == '(') {
         // This is a function call, save the function name
-        if (function_name != nullptr) {
-            free(function_name);
+        if (current_function_name != nullptr) {
+            free(current_function_name);
         }
-        function_name = strdup(yytext);
+        current_function_name = strdup(yytext);
         unput(c); // Put back the '('
     } else {
         unput(c); // Put back the character
@@ -120,6 +120,10 @@ void cleanup_lexer(){
     if(function_name){
         free(function_name);
         function_name = nullptr;
+    }
+    if(current_function_name){
+        free(current_function_name);
+        current_function_name = nullptr;
     }
 }
 

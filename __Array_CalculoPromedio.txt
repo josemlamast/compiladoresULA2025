@@ -1,0 +1,17 @@
+fun calcularPromedio(x) 
+    if(length(x) == 1)
+        (head(x))
+    else
+      (head(x)) + calcularPromedio(tail(x))
+    end
+end
+
+@la funcion serviria para numeros reales, pero al momento de la divicion 
+hay que hacer in parser con itor para dividir reales con reales, de lo contrario 
+dara error de type_check -> itor(length(list))
+@
+
+let  list = [1, 2, 3, 4, 6] in 
+       print(calcularPromedio(list)/length(list))
+end
+    
