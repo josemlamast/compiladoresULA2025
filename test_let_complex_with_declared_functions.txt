@@ -1,0 +1,35 @@
+fun getPositive(x)
+    if(x > 0)
+        x
+    else
+        0
+    end
+end
+
+fun getNegative(x)
+    if(x < 0)
+        x
+    else
+        0
+    end
+end
+
+let y = 5 in
+    if(y > 0)
+        let z = 10 in
+            if(z > 5)
+                getPositive(y) + getPositive(z)
+            else
+                getNegative(y) + getNegative(z)
+            end
+        end
+    else
+        let w = 20 in
+            if(w > 15)
+                getPositive(y) * getPositive(w)
+            else
+                getNegative(y) * getNegative(w)
+            end
+        end
+    end
+end
